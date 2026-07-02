@@ -164,3 +164,18 @@
     @apply font-sans;
   }
 }
+@layer base {
+  .app-ambient {
+    background:
+      radial-gradient(900px 520px at 50% -8%, rgba(18, 161, 131, 0.18), transparent 60%),
+      radial-gradient(760px 520px at 112% 18%, rgba(183, 121, 31, 0.1), transparent 55%),
+      linear-gradient(180deg, #e9f0ec, #dae6e0);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
