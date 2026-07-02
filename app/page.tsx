@@ -1,17 +1,36 @@
-import { TrustSeal, TrustSealBadge } from "@/components/mboacoin/trust-seal";
+import { ListingCard, type Listing } from "@/components/mboacoin/listing-card";
+
+const DEMO: Listing[] = [
+  {
+    id: "1",
+    title: "Appartement standing",
+    location: "Bastos, Yaoundé",
+    price: 350000,
+    priceSuffix: "/ mois",
+    image: "/img/listings/demo-1.jpg",
+    verified: true,
+    bedrooms: 3,
+    favorite: true,
+  },
+  {
+    id: "2",
+    title: "Studio moderne",
+    location: "Akwa, Douala",
+    price: 150000,
+    priceSuffix: "/ mois",
+    image: "/img/listings/demo-1.jpg",
+    verified: false,
+    bedrooms: 1,
+  },
+];
 
 export default function Home() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-8">
-      <div className="flex items-center gap-3">
-        <TrustSeal size={48} />
-        <TrustSeal size={48} tone="pending" />
-      </div>
-      <TrustSealBadge label="Profil vérifié" />
-      <TrustSealBadge label="Non vérifié" tone="pending" />
-      <p className="text-sm text-muted-foreground">
-        Prix exemple : <span className="font-mono font-bold text-primary">150 000 F</span>
-      </p>
+    <main className="mx-auto w-full max-w-md space-y-4 p-4">
+      <h1 className="text-lg font-bold">Annonces récentes</h1>
+      {DEMO.map((l) => (
+        <ListingCard key={l.id} listing={l} />
+      ))}
     </main>
   );
 }
