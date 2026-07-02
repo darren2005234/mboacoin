@@ -179,3 +179,21 @@
     scrollbar-width: none;
   }
 }
+.mboa-phone .PhoneInputInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0.75rem 0;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+}
+.mboa-phone .PhoneInputInput::placeholder {
+  color: var(--color-muted-foreground);
+}
+.mboa-phone .PhoneInputCountry {
+  margin-right: 0.5rem;
+}
+.mboa-phone .PhoneInputCountrySelectArrow {
+  color: var(--color-muted-foreground);
+  opacity: 0.7;
+}
