@@ -1,15 +1,12 @@
-import { ListingCard, type Listing } from "@/components/mboacoin/listing-card";
+import { ListingCard } from "@/components/mboacoin/listing-card";
+import { getPublishedListings } from "@/lib/listings";
 import { Bell, Search, SlidersHorizontal } from "lucide-react";
-
-const DEMO: Listing[] = [
-  { id: "1", title: "Appartement standing", location: "Bastos, Yaoundé", price: 350000, priceSuffix: "/ mois", image: "/img/listings/demo-1.jpg", verified: true, bedrooms: 3, favorite: true },
-  { id: "2", title: "Studio moderne", location: "Akwa, Douala", price: 150000, priceSuffix: "/ mois", image: "/img/listings/demo-1.jpg", verified: false, bedrooms: 1 },
-  { id: "3", title: "Villa 4 pièces", location: "Bonapriso, Douala", price: 500000, priceSuffix: "/ mois", image: "/img/listings/demo-1.jpg", verified: true, bedrooms: 4 },
-];
 
 const CATEGORIES = ["Studios", "Appartements", "Villas", "Chambres", "Meublés"];
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const listings = await getPublishedListings();
+
   return (
     <div className="flex flex-col">
       <header className="flex items-center justify-between p-4">
@@ -50,12 +47,20 @@ export default function ExplorePage() {
 
       <div className="space-y-3 px-4 pb-6">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold">Annonces récentes ({DEMO.length})</p>
+          <p className="text-xs font-bold">Annonces récentes ({listings.length})</p>
           <span className="text-[11px] font-semibold text-primary">Voir tout</span>
         </div>
-        {DEMO.map((l) => (
-          <ListingCard key={l.id} listing={l} />
-        ))}
+
+        {listings.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border p-8 text-center">
+            <p className="text-sm font-bold">Aucune annonce pour l&apos;instant</p>
+            <p className="text-xs text-muted-foreground">
+              Les annonces publiées apparaîtront ici.
+            </p>
+          </div>
+        ) : (
+          listings.map((l) => <ListingCard key={l.id} listing={l} />)
+        )}
       </div>
     </div>
   );
