@@ -15,18 +15,31 @@ function VerifyInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function verify(value: string) {
+async function verify(value: string) {
     setError(null);
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         phone: tel,
         token: value,
         type: "sms",
       });
       if (error) throw error;
-      router.push("/explore");
+
+      // Le profil a-t-il déjà un nom ?
+      const userId = data.user?.id;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId!)
+        .maybeSingle();
+
+      if (profile?.full_name) {
+        router.push("/explore");
+      } else {
+        router.push("/onboarding");
+      }
     } catch {
       setError("Code invalide ou expiré. Réessayez.");
       setLoading(false);
