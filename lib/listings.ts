@@ -26,3 +26,27 @@ export async function getPublishedListings(): Promise<Listing[]> {
     verified: true,
   }));
 }
+
+/** Récupère une annonce publiée par son id, ou null si introuvable. */
+export async function getListingById(id: string): Promise<Listing | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("listings")
+    .select("id, title, city, neighborhood, price, bedrooms, image_url, status")
+    .eq("id", id)
+    .eq("status", "publiee")
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    title: data.title,
+    location: [data.neighborhood, data.city].filter(Boolean).join(", "),
+    price: data.price,
+    priceSuffix: "/ mois",
+    image: data.image_url ?? "/img/listings/demo-1.jpg",
+    bedrooms: data.bedrooms ?? undefined,
+    verified: true,
+  };
+}
