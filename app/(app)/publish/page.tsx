@@ -12,6 +12,7 @@ const TYPES = ["Studio", "Appartement", "Villa", "Chambre"];
 export default function PublishPage() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
+  const [description, setDescription] = useState("");
   const [type, setType] = useState("Studio");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +42,7 @@ export default function PublishPage() {
       bedrooms: Number(form.get("bedrooms")) || 0,
       advanceMonths: Number(form.get("advance")) || 1,
       depositMonths: Number(form.get("deposit")) || 1,
-      description: String(form.get("description")),
+      description: description,
       files,
     });
 
@@ -113,12 +114,26 @@ export default function PublishPage() {
         </div>
 
         <div>
-          <label htmlFor="description" className="field-label">Description</label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="description" className="field-label">Description</label>
+            <span
+              className={
+                description.length >= 1500
+                  ? "text-xs font-medium text-destructive"
+                  : "text-xs text-muted-foreground"
+              }
+            >
+              {description.length} / 1500
+            </span>
+          </div>
           <textarea
             id="description"
             name="description"
-            rows={4}
-            placeholder="Décrivez le bien, les commodités, l'environnement..."
+            rows={5}
+            maxLength={1500}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Décrivez le bien : commodités (eau, électricité), quartier, conditions, ce qui le rend unique..."
             className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
           />
         </div>

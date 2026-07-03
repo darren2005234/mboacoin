@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MessageSquare, CalendarDays } from "lucide-react";
@@ -6,6 +5,8 @@ import { getListingById } from "@/lib/listings";
 import { Price } from "@/components/mboacoin/price";
 import { TrustSeal } from "@/components/mboacoin/trust-seal";
 import { Button } from "@/components/ui/button";
+import { Gallery } from "@/components/mboacoin/gallery";
+import { ExpandableText } from "@/components/mboacoin/expandable-text";
 
 export default async function ListingDetailPage({
   params,
@@ -18,12 +19,12 @@ export default async function ListingDetailPage({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="relative h-60 shrink-0 bg-secondary">
-        <Image src={listing.image} alt="" fill className="object-cover" sizes="448px" priority />
+      <div className="relative shrink-0">
+        <Gallery images={listing.images} alt={listing.title} />
         <Link
           href="/explore"
           aria-label="Retour"
-          className="absolute left-4 top-4 grid size-10 place-items-center rounded-full bg-card/85 text-foreground backdrop-blur"
+          className="absolute left-4 top-4 z-10 grid size-10 place-items-center rounded-full bg-card/85 text-foreground backdrop-blur"
         >
           <ArrowLeft className="size-5" />
         </Link>
@@ -76,9 +77,7 @@ export default async function ListingDetailPage({
         {listing.description && (
           <div className="space-y-2">
             <h2 className="text-sm font-bold">Description</h2>
-            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
-              {listing.description}
-            </p>
+            <ExpandableText text={listing.description} />
           </div>
         )}
       </div>

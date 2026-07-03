@@ -18,7 +18,6 @@ export interface CreateListingResult {
   error?: string;
 }
 
-/** Téléverse les photos puis crée l'annonce. Retourne l'id, ou une erreur. */
 export async function createListing(input: NewListingInput): Promise<CreateListingResult> {
   const supabase = createClient();
 
@@ -27,22 +26,25 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
   } = await supabase.auth.getUser();
   if (!user) return { error: "Vous devez être connecté." };
 
-  // 1. Téléverser les photos
-  const urls: string[] = [];
+  // 1. Téléverser les photos et mémoriser leurs chemins
+  const paths: string[] = [];
   for (const file of input.files) {
     const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error: upErr } = await supabase.storage
       .from("listings")
       .upload(path, file, { upsert: false });
     if (upErr) return { error: `Upload photo : ${upErr.message}` };
-
-    const { data } = supabase.storage.from("listings").getPublicUrl(path);
-    urls.push(data.publicUrl);
+    paths.push(path);
   }
 
-  // 2. Insérer l'annonce (première photo = image principale)
-  const { data, error } = await supabase
+  // 2. Créer l'annonce (première photo comme aperçu principal)
+  const firstUrl =
+    paths.length > 0
+      ? supabase.storage.from("listings").getPublicUrl(paths[0]).data.publicUrl
+      : null;
+
+  const { data: listing, error } = await supabase
     .from("listings")
     .insert({
       owner_id: user.id,
@@ -55,12 +57,24 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       advance_months: input.advanceMonths,
       deposit_months: input.depositMonths,
       description: input.description,
-      image_url: urls[0] ?? null,
+      image_url: firstUrl,
       status: "publiee",
     })
     .select("id")
     .single();
 
   if (error) return { error: `Création : ${error.message}` };
-  return { id: data.id };
+
+  // 3. Enregistrer chaque photo dans listing_media
+  if (paths.length > 0) {
+    const rows = paths.map((path, i) => ({
+      listing_id: listing.id,
+      storage_path: path,
+      position: i,
+    }));
+    const { error: mediaErr } = await supabase.from("listing_media").insert(rows);
+    if (mediaErr) return { error: `Enregistrement photos : ${mediaErr.message}` };
+  }
+
+  return { id: listing.id };
 }
