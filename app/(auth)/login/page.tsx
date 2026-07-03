@@ -28,24 +28,26 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 p-6">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <Wordmark />
-        <h1 className="mt-4 text-xl font-extrabold">Bienvenue</h1>
-        <p className="text-sm text-muted-foreground">
-          Connectez-vous avec votre numéro pour continuer.
-        </p>
-      </div>
+    <main className="app-ambient flex min-h-dvh w-full items-center justify-center lg:py-8">
+      <div className="relative flex h-dvh w-full flex-col justify-center overflow-hidden bg-card p-6 lg:h-[860px] lg:w-[392px] lg:rounded-[2.6rem] lg:border lg:border-border lg:shadow-soft lg:ring-1 lg:ring-black/5">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <Wordmark />
+          <h1 className="mt-4 text-2xl font-extrabold">Connexion ou inscription</h1>
+          <p className="text-sm text-muted-foreground">
+            Entrez votre numéro. On vous crée un compte si vous n&apos;en avez pas encore.
+          </p>
+        </div>
 
-      <div className="space-y-4">
-        <PhoneField value={phone} onChange={setPhone} />
-        {error && <p className="text-center text-xs font-medium text-destructive">{error}</p>}
-        <Button size="lg" className="w-full" onClick={submit} disabled={!phone || loading}>
-          {loading ? "Envoi en cours..." : "Recevoir le code"}
-        </Button>
-        <p className="text-center text-[11px] text-muted-foreground">
-          Un code de vérification vous sera envoyé par SMS.
-        </p>
+        <div className="mt-8 space-y-4">
+          <PhoneField value={phone} onChange={setPhone} />
+          {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
+          <Button size="lg" className="w-full" onClick={submit} disabled={!phone || loading}>
+            {loading ? "Envoi en cours..." : "Recevoir le code"}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Un code de vérification vous sera envoyé par SMS.
+          </p>
+        </div>
       </div>
     </main>
   );

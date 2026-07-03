@@ -20,13 +20,18 @@ export async function completeProfile(formData: FormData) {
     return { error: "Session introuvable. Reconnectez-vous." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update({ full_name: fullName, city: city || null })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select();
 
   if (error) {
-    return { error: "Enregistrement impossible. Réessayez." };
+    return { error: `Erreur base : ${error.message}` };
+  }
+
+  if (!data || data.length === 0) {
+    return { error: "Aucune ligne modifiée (profil introuvable ou bloqué par la sécurité)." };
   }
 
   redirect("/explore");

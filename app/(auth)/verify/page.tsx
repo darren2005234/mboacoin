@@ -15,7 +15,7 @@ function VerifyInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-async function verify(value: string) {
+  async function verify(value: string) {
     setError(null);
     setLoading(true);
     try {
@@ -27,7 +27,6 @@ async function verify(value: string) {
       });
       if (error) throw error;
 
-      // Le profil a-t-il déjà un nom ?
       const userId = data.user?.id;
       const { data: profile } = await supabase
         .from("profiles")
@@ -47,36 +46,38 @@ async function verify(value: string) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-8 p-6">
-      <button
-        onClick={() => router.push("/login")}
-        aria-label="Retour"
-        className="grid size-9 place-items-center rounded-full bg-secondary text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" />
-      </button>
-
-      <div className="flex flex-col items-center gap-2 text-center">
-        <span className="grid size-14 place-items-center rounded-2xl bg-brand-50 text-accent">
-          <MessageSquare className="size-6" />
-        </span>
-        <h1 className="text-xl font-extrabold">Entrez le code</h1>
-        <p className="text-sm text-muted-foreground">
-          Envoyé par SMS au <span className="font-mono font-bold text-foreground">{tel}</span>
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <OtpInput value={code} onChange={setCode} onComplete={verify} />
-        {error && <p className="text-center text-xs font-medium text-destructive">{error}</p>}
-        <Button
-          size="lg"
-          className="w-full"
-          disabled={code.length < 6 || loading}
-          onClick={() => verify(code)}
+    <main className="app-ambient flex min-h-dvh w-full items-center justify-center lg:py-8">
+      <div className="relative flex h-dvh w-full flex-col justify-center overflow-hidden bg-card p-6 lg:h-[860px] lg:w-[392px] lg:rounded-[2.6rem] lg:border lg:border-border lg:shadow-soft lg:ring-1 lg:ring-black/5">
+        <button
+          onClick={() => router.push("/login")}
+          aria-label="Retour"
+          className="absolute left-6 top-6 grid size-10 place-items-center rounded-full bg-secondary text-muted-foreground"
         >
-          {loading ? "Vérification..." : "Vérifier et continuer"}
-        </Button>
+          <ArrowLeft className="size-5" />
+        </button>
+
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="icon-badge size-14">
+            <MessageSquare className="size-6" strokeWidth={2.25} />
+          </span>
+          <h1 className="mt-2 text-2xl font-extrabold">Entrez le code</h1>
+          <p className="text-sm text-muted-foreground">
+            Envoyé par SMS au <span className="font-mono font-bold text-foreground">{tel}</span>
+          </p>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          <OtpInput value={code} onChange={setCode} onComplete={verify} />
+          {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={code.length < 6 || loading}
+            onClick={() => verify(code)}
+          >
+            {loading ? "Vérification..." : "Vérifier et continuer"}
+          </Button>
+        </div>
       </div>
     </main>
   );

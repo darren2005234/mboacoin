@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Bell, SlidersHorizontal, Search } from "lucide-react";
+import { SlidersHorizontal, Search } from "lucide-react";
 import { ListingCard } from "@/components/mboacoin/listing-card";
 import { Wordmark } from "@/components/mboacoin/wordmark";
+import { Icon } from "@/components/mboacoin/icon";
 import { getPublishedListings } from "@/lib/listings";
 import { getCurrentProfile } from "@/lib/profile";
 
@@ -20,8 +21,11 @@ export default async function ExplorePage() {
             <p className="text-sm text-muted-foreground">Bonjour,</p>
             <p className="text-lg font-extrabold">{profile.fullName ?? profile.phone}</p>
           </div>
-          <button aria-label="Notifications" className="grid size-11 place-items-center rounded-full bg-secondary text-foreground">
-            <Bell className="size-5" strokeWidth={2.25} />
+          <button
+            aria-label="Notifications"
+            className="grid size-11 place-items-center rounded-full bg-secondary text-foreground"
+          >
+            <Icon name="notifications" size={22} />
           </button>
         </header>
       ) : (
@@ -32,7 +36,7 @@ export default async function ExplorePage() {
               href="/login"
               className="rounded-full bg-brand-50 px-4 py-2 text-sm font-bold text-primary"
             >
-              Se connecter
+              Connexion
             </Link>
           </div>
           <h1 className="screen-title">Un logement de confiance, sans mauvaise surprise.</h1>

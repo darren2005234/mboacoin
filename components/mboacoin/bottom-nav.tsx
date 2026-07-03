@@ -2,22 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Heart, MessageCircle, User } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Icon } from "@/components/mboacoin/icon";
 import { cn } from "@/lib/utils";
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/explore", label: "Explorer", icon: Compass },
-  { href: "/favorites", label: "Favoris", icon: Heart },
-  { href: "/messages", label: "Messages", icon: MessageCircle },
-  { href: "/profile", label: "Profil", icon: User },
-];
+interface BottomNavProps {
+  isAuthenticated: boolean;
+}
 
-export function BottomNav() {
+export function BottomNav({ isAuthenticated }: BottomNavProps) {
   const pathname = usePathname();
+
+  const items = [
+    { href: "/explore", label: "Explorer", icon: "explore" },
+    { href: "/favorites", label: "Favoris", icon: "favorite" },
+    { href: "/messages", label: "Messages", icon: "chat_bubble" },
+    isAuthenticated
+      ? { href: "/profile", label: "Profil", icon: "person" }
+      : { href: "/login", label: "Connexion", icon: "login" },
+  ];
+
   return (
-    <nav className="flex items-center justify-around border-t border-border bg-card px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3">
-      {NAV.map(({ href, label, icon: Icon }) => {
+    <nav className="flex items-center justify-around border-t border-border bg-card px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2.5">
+      {items.map(({ href, label, icon }) => {
         const active = pathname === href || pathname.startsWith(href + "/");
         return (
           <Link
@@ -25,12 +31,14 @@ export function BottomNav() {
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-lg px-2 py-1 transition-colors",
-              active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              "flex flex-col items-center gap-1 rounded-lg px-3 py-1 transition-colors",
+              active ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <Icon className={cn("size-5", active && "fill-primary/10")} />
-            <span className={cn("text-[10px]", active ? "font-bold" : "font-medium")}>{label}</span>
+            <Icon name={icon} size={24} filled={active} />
+            <span className={cn("text-[11px]", active ? "font-bold" : "font-medium")}>
+              {label}
+            </span>
           </Link>
         );
       })}
