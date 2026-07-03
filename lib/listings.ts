@@ -38,7 +38,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, advance_months, deposit_months, image_url, status, owner:profiles(full_name, verification), media:listing_media(storage_path, position)"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner:profiles(full_name, verification), media:listing_media(storage_path, position)"
     )
     .eq("id", id)
     .eq("status", "publiee")
@@ -48,13 +48,10 @@ export async function getListingById(id: string) {
 
   const owner = Array.isArray(data.owner) ? data.owner[0] : data.owner;
 
-  // Reconstruire les URLs publiques des photos, triées par position
   const media = (data.media ?? []) as { storage_path: string; position: number }[];
   const images = media
     .sort((a, b) => a.position - b.position)
     .map((m) => supabase.storage.from("listings").getPublicUrl(m.storage_path).data.publicUrl);
-
-  // Repli sur image_url si aucune photo dans listing_media
   const gallery = images.length > 0 ? images : data.image_url ? [data.image_url] : [];
 
   return {
@@ -65,9 +62,14 @@ export async function getListingById(id: string) {
     price: data.price,
     priceSuffix: "/ mois",
     images: gallery,
-    bedrooms: data.bedrooms ?? undefined,
+    bedrooms: data.bedrooms ?? null,
+    bathrooms: data.bathrooms ?? null,
     advanceMonths: data.advance_months ?? null,
     depositMonths: data.deposit_months ?? null,
+    furnishing: (data.furnishing as string | null) ?? null,
+    water: (data.water as string | null) ?? null,
+    electricity: (data.electricity as string | null) ?? null,
+    amenities: (data.amenities as string[] | null) ?? [],
     ownerName: owner?.full_name ?? "Bailleur",
     verified: owner?.verification === "verifie",
   };

@@ -7,6 +7,7 @@ import { TrustSeal } from "@/components/mboacoin/trust-seal";
 import { Button } from "@/components/ui/button";
 import { Gallery } from "@/components/mboacoin/gallery";
 import { ExpandableText } from "@/components/mboacoin/expandable-text";
+import { ListingFeatures } from "@/components/mboacoin/listing-features";
 
 export default async function ListingDetailPage({
   params,
@@ -72,7 +73,16 @@ export default async function ListingDetailPage({
             </div>
           </div>
         </div>
-
+        <ListingFeatures
+          features={{
+            bedrooms: listing.bedrooms,
+            bathrooms: listing.bathrooms,
+            furnishing: listing.furnishing,
+            water: listing.water,
+            electricity: listing.electricity,
+            amenities: listing.amenities,
+          }}
+        />
         {/* Description : affichée seulement si renseignée */}
         {listing.description && (
           <div className="space-y-2">

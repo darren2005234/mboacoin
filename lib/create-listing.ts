@@ -7,8 +7,13 @@ export interface NewListingInput {
   neighborhood: string;
   price: number;
   bedrooms: number;
+  bathrooms: number;
   advanceMonths: number;
   depositMonths: number;
+  furnishing: string;
+  water: string | null;
+  electricity: string | null;
+  amenities: string[];
   description: string;
   files: File[];
 }
@@ -54,8 +59,13 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       neighborhood: input.neighborhood,
       price: input.price,
       bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms || null,
       advance_months: input.advanceMonths,
       deposit_months: input.depositMonths,
+      furnishing: input.furnishing,
+      water: input.water,
+      electricity: input.electricity,
+      amenities: input.amenities,
       description: input.description,
       image_url: firstUrl,
       status: "publiee",
