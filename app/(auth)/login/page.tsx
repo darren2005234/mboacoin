@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isValid = phone.length >= 8;
+
   async function submit() {
     setError(null);
     setLoading(true);
@@ -41,7 +43,7 @@ export default function LoginPage() {
         <div className="mt-8 space-y-4">
           <PhoneField value={phone} onChange={setPhone} />
           {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
-          <Button size="lg" className="w-full" onClick={submit} disabled={!phone || loading}>
+          <Button size="lg" className="w-full" onClick={submit} disabled={!isValid || loading}>
             {loading ? "Envoi en cours..." : "Recevoir le code"}
           </Button>
           <p className="text-center text-xs text-muted-foreground">

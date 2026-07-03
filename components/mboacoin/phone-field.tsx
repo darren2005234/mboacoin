@@ -10,7 +10,7 @@ interface PhoneFieldProps {
   className?: string;
 }
 
-/** Champ téléphone international avec sélecteur de pays. Sort un numéro au format E.164 (+237...). */
+/** Champ téléphone international avec sélecteur de pays et drapeaux. Sort un numéro au format E.164. */
 export function PhoneField({ value, onChange, className }: PhoneFieldProps) {
   return (
     <div

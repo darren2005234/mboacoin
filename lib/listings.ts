@@ -6,7 +6,9 @@ export async function getPublishedListings(): Promise<Listing[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, bedrooms, image_url, status")
+    .select(
+      "id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles(full_name, verification)"
+    )
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
 
@@ -15,38 +17,49 @@ export async function getPublishedListings(): Promise<Listing[]> {
     return [];
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    location: [row.neighborhood, row.city].filter(Boolean).join(", "),
-    price: row.price,
-    priceSuffix: "/ mois",
-    image: row.image_url ?? "/img/listings/demo-1.jpg",
-    bedrooms: row.bedrooms ?? undefined,
-    verified: true,
-  }));
+  return (data ?? []).map((row) => {
+    const owner = Array.isArray(row.owner) ? row.owner[0] : row.owner;
+    return {
+      id: row.id,
+      title: row.title,
+      location: [row.neighborhood, row.city].filter(Boolean).join(", "),
+      price: row.price,
+      priceSuffix: "/ mois",
+      image: row.image_url ?? "/img/listings/demo-1.jpg",
+      bedrooms: row.bedrooms ?? undefined,
+      verified: owner?.verification === "verifie",
+    };
+  });
 }
 
 /** Récupère une annonce publiée par son id, ou null si introuvable. */
-export async function getListingById(id: string): Promise<Listing | null> {
+export async function getListingById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, bedrooms, image_url, status")
+    .select(
+      "id, title, description, city, neighborhood, price, bedrooms, advance_months, deposit_months, image_url, status, owner_id, owner:profiles(full_name, verification)"
+    )
     .eq("id", id)
     .eq("status", "publiee")
     .maybeSingle();
 
   if (error || !data) return null;
 
+  const owner = Array.isArray(data.owner) ? data.owner[0] : data.owner;
+  console.log("DEBUG bailleur:", JSON.stringify(owner));  
   return {
     id: data.id,
     title: data.title,
+    description: (data.description as string | null) ?? null,
     location: [data.neighborhood, data.city].filter(Boolean).join(", "),
     price: data.price,
     priceSuffix: "/ mois",
     image: data.image_url ?? "/img/listings/demo-1.jpg",
     bedrooms: data.bedrooms ?? undefined,
-    verified: true,
+    advanceMonths: data.advance_months ?? null,
+    depositMonths: data.deposit_months ?? null,
+    ownerName: owner?.full_name ?? "Bailleur",
+    verified: owner?.verification === "verifie",
   };
 }
