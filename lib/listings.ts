@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Listing } from "@/components/mboacoin/listing-card";
 
+
 /** Récupère les annonces publiées, les plus récentes d'abord. */
 export async function getPublishedListings(): Promise<Listing[]> {
   const supabase = await createClient();
@@ -38,7 +39,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner:profiles(full_name, verification), media:listing_media(storage_path, position)"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles(full_name, verification), media:listing_media(storage_path, position)"
     )
     .eq("id", id)
     .eq("status", "publiee")
@@ -72,5 +73,6 @@ export async function getListingById(id: string) {
     amenities: (data.amenities as string[] | null) ?? [],
     ownerName: owner?.full_name ?? "Bailleur",
     verified: owner?.verification === "verifie",
+    ownerId: data.owner_id,
   };
 }

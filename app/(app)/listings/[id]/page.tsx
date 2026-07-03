@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Gallery } from "@/components/mboacoin/gallery";
 import { ExpandableText } from "@/components/mboacoin/expandable-text";
 import { ListingFeatures } from "@/components/mboacoin/listing-features";
+import { ContactButton } from "@/components/mboacoin/contact-button";
 
 export default async function ListingDetailPage({
   params,
@@ -93,9 +94,7 @@ export default async function ListingDetailPage({
       </div>
 
       <div className="sticky bottom-0 flex gap-3 border-t border-border bg-card p-4">
-        <Button variant="outline" size="lg" className="flex-1">
-          <MessageSquare className="size-5" /> Chat
-        </Button>
+        <ContactButton listingId={listing.id} ownerId={listing.ownerId} />
         <Button size="lg" className="flex-1">
           <CalendarDays className="size-5" /> Visiter
         </Button>
