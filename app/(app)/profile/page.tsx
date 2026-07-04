@@ -5,6 +5,7 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function ProfilePage() {
   const profile = await getCurrentProfile();
@@ -28,7 +29,7 @@ export default async function ProfilePage() {
       <div className="space-y-2 px-5">
         <MenuRow icon="person" label="Modifier mon profil" />
         <MenuRow icon="verified_user" label="Vérifier mon identité" />
-        <MenuRow icon="apartment" label="Mes annonces" />
+        <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
         <MenuRow icon="settings" label="Paramètres" />
       </div>
 
@@ -43,14 +44,35 @@ export default async function ProfilePage() {
   );
 }
 
-function MenuRow({ icon, label }: { icon: string; label: string }) {
-  return (
-    <button className="flex w-full items-center justify-between rounded-xl bg-secondary px-4 py-3.5 text-[15px] font-semibold">
+function MenuRow({
+  icon,
+  label,
+  href,
+}: {
+  icon: string;
+  label: string;
+  href?: string;
+}) {
+  const content = (
+    <>
       <span className="flex items-center gap-3">
         <Icon name={icon} size={22} className="text-muted-foreground" filled={false} />
         {label}
       </span>
       <Icon name="chevron_right" size={20} className="text-muted-foreground" />
-    </button>
+    </>
   );
+
+  const className =
+    "flex w-full items-center justify-between rounded-xl bg-secondary px-4 py-3.5 text-[15px] font-semibold";
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <button className={className}>{content}</button>;
 }
