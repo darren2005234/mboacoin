@@ -15,6 +15,7 @@ import {
 } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { Avatar } from "@/components/mboacoin/avatar";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -143,6 +144,7 @@ export default function ConversationPage({
         <Link href="/messages" aria-label="Retour" className="shrink-0 text-muted-foreground">
           <ArrowLeft className="size-5" />
         </Link>
+        <Avatar name={info?.other.name ?? "?"} src={info?.other.avatar ?? null} size={38} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="line-clamp-1 text-sm font-bold">{info?.other.name ?? "Conversation"}</p>

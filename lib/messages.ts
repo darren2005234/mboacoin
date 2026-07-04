@@ -12,7 +12,7 @@ export async function getConversation(conversationId: string) {
   const { data, error } = await supabase
     .from("conversations")
     .select(
-      "id, tenant_id, owner_id, listing:listings(id, title, price, image_url, neighborhood, city), tenant:profiles!conversations_tenant_id_fkey(full_name, city, verification, created_at), owner:profiles!conversations_owner_id_fkey(full_name, city, verification, created_at)"
+      "id, tenant_id, owner_id, listing:listings(id, title, price, image_url, neighborhood, city), tenant:profiles!conversations_tenant_id_fkey(full_name, city, verification, created_at, avatar_url), owner:profiles!conversations_owner_id_fkey(full_name, city, verification, created_at, avatar_url)"
     )
     .eq("id", conversationId)
     .maybeSingle();
@@ -42,6 +42,7 @@ export async function getConversation(conversationId: string) {
       city: other?.city ?? null,
       verified: other?.verification === "verifie",
       memberSince: other?.created_at ?? null,
+      avatar: other?.avatar_url ?? null,
     },
     otherIsOwner: !iAmOwner,
   };

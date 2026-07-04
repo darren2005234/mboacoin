@@ -10,6 +10,7 @@ import { ExpandableText } from "@/components/mboacoin/expandable-text";
 import { ListingFeatures } from "@/components/mboacoin/listing-features";
 import { ContactButton } from "@/components/mboacoin/contact-button";
 import { BackButton } from "@/components/mboacoin/back-button";
+import { Avatar } from "@/components/mboacoin/avatar";
 
 export default async function ListingDetailPage({
   params,
@@ -55,20 +56,23 @@ export default async function ListingDetailPage({
         )}
 
         {/* Bailleur : vrai nom, badge seulement si vérifié */}
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card">
-          <div className="grid size-11 place-items-center rounded-full bg-secondary text-sm font-bold text-muted-foreground">
-            {listing.ownerName.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-1.5 text-sm font-bold">
-              {listing.ownerName}
-              {listing.verified && <TrustSeal size={16} />}
+        <Link
+          href={`/users/${listing.ownerId}`}
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        >  
+          <div>
+            <Avatar name={listing.ownerName} src={listing.ownerAvatar} size={44} />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-sm font-bold">
+                {listing.ownerName}
+                {listing.verified && <TrustSeal size={16} />}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {listing.verified ? "Bailleur vérifié" : "Bailleur"}
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              {listing.verified ? "Bailleur vérifié" : "Bailleur"}
-            </div>
           </div>
-        </div>
+        </Link>
         <ListingFeatures
           features={{
             bedrooms: listing.bedrooms,
