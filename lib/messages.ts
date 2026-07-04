@@ -1,12 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
 
-export interface Message {
-  id: string;
-  body: string;
-  senderId: string;
-  createdAt: string;
-}
-
 /** Récupère les infos d'une conversation (annonce + interlocuteur). */
 export async function getConversation(conversationId: string) {
   const supabase = createClient();
@@ -33,12 +26,20 @@ export async function getConversation(conversationId: string) {
   };
 }
 
+export interface Message {
+  id: string;
+  body: string;
+  senderId: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
 /** Récupère les messages d'une conversation, du plus ancien au plus récent. */
 export async function getMessages(conversationId: string): Promise<Message[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
-    .select("id, body, sender_id, created_at")
+    .select("id, body, sender_id, created_at, read_at")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
@@ -48,6 +49,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     body: m.body,
     senderId: m.sender_id,
     createdAt: m.created_at,
+    readAt: m.read_at,
   }));
 }
 

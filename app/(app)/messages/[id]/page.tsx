@@ -1,5 +1,5 @@
 "use client";
-
+import { Icon } from "@/components/mboacoin/icon";
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,7 +49,7 @@ export default function ConversationPage({
       setLoading(false);
     })();
 
-    // Abonnement temps réel : on écoute les nouveaux messages de cette conversation
+// Abonnement temps réel : nouveaux messages ET mises à jour (lecture)
     const channel = supabase
       .channel(`messages:${id}`)
       .on(
@@ -66,12 +66,36 @@ export default function ConversationPage({
             body: string;
             sender_id: string;
             created_at: string;
+            read_at: string | null;
           };
           setMessages((prev) => {
-            // Évite les doublons (si le message est déjà là)
             if (prev.some((x) => x.id === m.id)) return prev;
-            return [...prev, { id: m.id, body: m.body, senderId: m.sender_id, createdAt: m.created_at }];
+            return [
+              ...prev,
+              {
+                id: m.id,
+                body: m.body,
+                senderId: m.sender_id,
+                createdAt: m.created_at,
+                readAt: m.read_at ?? null,
+              },
+            ];
           });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${id}`,
+        },
+        (payload) => {
+          const m = payload.new as { id: string; read_at: string | null };
+          setMessages((prev) =>
+            prev.map((x) => (x.id === m.id ? { ...x, readAt: m.read_at } : x))
+          );
         }
       )
       .subscribe();
@@ -145,7 +169,16 @@ export default function ConversationPage({
                       : "rounded-bl-md bg-secondary text-foreground"
                   )}
                 >
-                  {m.body}
+                  <span>{m.body}</span>
+                  {mine && (
+                    <span className="ml-2 inline-flex translate-y-0.5 items-center">
+                      <Icon
+                        name={m.readAt ? "done_all" : "done"}
+                        size={15}
+                        className={m.readAt ? "text-brand-200" : "text-primary-foreground/60"}
+                      />
+                    </span>
+                  )}
                 </div>
               </div>
             );
