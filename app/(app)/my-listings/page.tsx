@@ -83,6 +83,12 @@ export default function MyListingsPage() {
 
               <div className="mt-3 flex gap-2 border-t border-border pt-3">
                 <button
+                  onClick={() => router.push(`/listings/${l.id}/edit`)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-secondary py-2 text-xs font-bold text-foreground"
+                >
+                  <Icon name="edit" size={16} filled={false} /> Modifier
+                </button>
+                <button
                   onClick={() => toggleRented(l)}
                   disabled={busy === l.id}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-secondary py-2 text-xs font-bold text-foreground disabled:opacity-50"

@@ -6,6 +6,7 @@ import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { EditableAvatar } from "@/components/mboacoin/editable-avatar";
 
 export default async function ProfilePage() {
   const profile = await getCurrentProfile();
@@ -16,9 +17,11 @@ export default async function ProfilePage() {
       <ScreenHeader title="Mon profil" />
 
       <div className="flex flex-col items-center gap-3 px-5 pb-6 text-center">
-        <div className="grid size-20 place-items-center rounded-full bg-secondary">
-          <Icon name="person" size={40} className="text-muted-foreground" />
-        </div>
+        <EditableAvatar
+          name={profile.fullName ?? "Utilisateur"}
+          initialSrc={profile.avatarUrl}
+          size={80}
+        />
         <div>
           <p className="text-lg font-extrabold">{profile.fullName ?? "Sans nom"}</p>
           <p className="text-sm text-muted-foreground">{profile.phone}</p>
