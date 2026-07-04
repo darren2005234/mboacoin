@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
@@ -11,49 +11,33 @@ export default function MessagesPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
-    let myId: string | null = null;
 
     async function load() {
       setConversations(await getMyConversations());
       setLoading(false);
     }
 
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      myId = user?.id ?? null;
-      await load();
+    load();
 
-      // Temps réel : dès qu'un message est inséré, on recharge les compteurs
-      const channel = supabase
-        .channel("messages-list")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages" },
-          () => {
-            load();
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "messages" },
-          () => {
-            load();
-          }
-        )
-        .subscribe();
-
-      // Nettoyage à la sortie
-      cleanupRef.current = () => supabase.removeChannel(channel);
-    })();
+    const channel = supabase
+      .channel("messages-list")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        () => load()
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        () => load()
+      )
+      .subscribe();
 
     return () => {
-      cleanupRef.current?.();
+      supabase.removeChannel(channel);
     };
   }, []);
 

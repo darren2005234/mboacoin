@@ -14,6 +14,7 @@ import {
   type Message,
 } from "@/lib/messages";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -29,7 +30,8 @@ export default function ConversationPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const [info, setInfo] = useState<{ myId: string; listingTitle: string } | null>(null);
+  type ConvInfo = Awaited<ReturnType<typeof getConversation>>;
+  const [info, setInfo] = useState<ConvInfo>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ export default function ConversationPage({
         router.push("/messages");
         return;
       }
-      setInfo({ myId: conv.myId, listingTitle: conv.listingTitle });
+      setInfo(conv);
       setMessages(await getMessages(id));
       await markConversationRead(id);
       setLoading(false);
@@ -136,15 +138,45 @@ export default function ConversationPage({
 
   return (
     <div className="flex h-full flex-col">
-      {/* En-tête */}
+      {/* En-tête : interlocuteur */}
       <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Link href="/messages" aria-label="Retour" className="text-muted-foreground">
+        <Link href="/messages" aria-label="Retour" className="shrink-0 text-muted-foreground">
           <ArrowLeft className="size-5" />
         </Link>
-        <p className="line-clamp-1 text-sm font-bold">
-          {info?.listingTitle ?? "Conversation"}
-        </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="line-clamp-1 text-sm font-bold">{info?.other.name ?? "Conversation"}</p>
+            {info?.other.verified && <Icon name="verified" size={15} className="text-seal" />}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {info?.otherIsOwner ? "Bailleur" : "Locataire"}
+            {info?.other.memberSince
+              ? ` · Membre depuis ${new Date(info.other.memberSince).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}`
+              : ""}
+          </p>
+        </div>
       </header>
+
+      {/* Encart annonce reliée */}
+      {info?.listing && (
+        <Link
+          href={`/listings/${info.listing.id}`}
+          className="flex items-center gap-3 border-b border-border bg-secondary/40 px-4 py-2.5"
+        >
+          <div className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-secondary">
+            {info.listing.image && (
+              <Image src={info.listing.image} alt="" fill className="object-cover" sizes="44px" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-1 text-xs font-bold">{info.listing.title}</p>
+            <p className="text-[11px] text-muted-foreground">{info.listing.location}</p>
+          </div>
+          <p className="shrink-0 font-mono text-xs font-bold text-primary">
+            {new Intl.NumberFormat("fr-FR").format(info.listing.price)} F
+          </p>
+        </Link>
+      )}
 
       {/* Messages */}
       <div className="flex-1 space-y-2 overflow-y-auto p-4">

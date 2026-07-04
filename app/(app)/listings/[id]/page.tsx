@@ -9,6 +9,7 @@ import { Gallery } from "@/components/mboacoin/gallery";
 import { ExpandableText } from "@/components/mboacoin/expandable-text";
 import { ListingFeatures } from "@/components/mboacoin/listing-features";
 import { ContactButton } from "@/components/mboacoin/contact-button";
+import { BackButton } from "@/components/mboacoin/back-button";
 
 export default async function ListingDetailPage({
   params,
@@ -23,13 +24,7 @@ export default async function ListingDetailPage({
     <div className="flex min-h-full flex-col">
       <div className="relative shrink-0">
         <Gallery images={listing.images} alt={listing.title} />
-        <Link
-          href="/explore"
-          aria-label="Retour"
-          className="absolute left-4 top-4 z-10 grid size-10 place-items-center rounded-full bg-card/85 text-foreground backdrop-blur"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
+        <BackButton />
       </div>
 
       <div className="flex-1 space-y-6 p-5">

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 /** Récupère les infos d'une conversation (annonce + interlocuteur). */
+/** Récupère les infos d'une conversation : annonce reliée + interlocuteur. */
 export async function getConversation(conversationId: string) {
   const supabase = createClient();
   const {
@@ -10,19 +11,39 @@ export async function getConversation(conversationId: string) {
 
   const { data, error } = await supabase
     .from("conversations")
-    .select("id, tenant_id, owner_id, listing:listings(title, image_url)")
+    .select(
+      "id, tenant_id, owner_id, listing:listings(id, title, price, image_url, neighborhood, city), tenant:profiles!conversations_tenant_id_fkey(full_name, city, verification, created_at), owner:profiles!conversations_owner_id_fkey(full_name, city, verification, created_at)"
+    )
     .eq("id", conversationId)
     .maybeSingle();
 
   if (error || !data) return null;
 
   const listing = Array.isArray(data.listing) ? data.listing[0] : data.listing;
+  const tenant = Array.isArray(data.tenant) ? data.tenant[0] : data.tenant;
+  const owner = Array.isArray(data.owner) ? data.owner[0] : data.owner;
+
+  // L'interlocuteur, c'est l'autre personne que moi
+  const iAmOwner = data.owner_id === user.id;
+  const other = iAmOwner ? tenant : owner;
 
   return {
     id: data.id,
     myId: user.id,
-    listingTitle: listing?.title ?? "Annonce",
-    listingImage: listing?.image_url ?? null,
+    listing: {
+      id: listing?.id ?? "",
+      title: listing?.title ?? "Annonce",
+      price: listing?.price ?? 0,
+      image: listing?.image_url ?? null,
+      location: [listing?.neighborhood, listing?.city].filter(Boolean).join(", "),
+    },
+    other: {
+      name: other?.full_name ?? "Utilisateur",
+      city: other?.city ?? null,
+      verified: other?.verification === "verifie",
+      memberSince: other?.created_at ?? null,
+    },
+    otherIsOwner: !iAmOwner,
   };
 }
 
