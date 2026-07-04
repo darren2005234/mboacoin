@@ -1,4 +1,5 @@
 "use client";
+
 import { Icon } from "@/components/mboacoin/icon";
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -9,10 +10,10 @@ import {
   getConversation,
   getMessages,
   sendMessage,
+  markConversationRead,
   type Message,
 } from "@/lib/messages";
 import { cn } from "@/lib/utils";
-import { markConversationRead } from "@/lib/messages";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -39,17 +40,17 @@ export default function ConversationPage({
 
     (async () => {
       const conv = await getConversation(id);
-      await markConversationRead(id);
       if (!conv) {
         router.push("/messages");
         return;
       }
       setInfo({ myId: conv.myId, listingTitle: conv.listingTitle });
       setMessages(await getMessages(id));
+      await markConversationRead(id);
       setLoading(false);
     })();
 
-// Abonnement temps réel : nouveaux messages ET mises à jour (lecture)
+    // Abonnement temps réel : nouveaux messages ET mises à jour (lecture)
     const channel = supabase
       .channel(`messages:${id}`)
       .on(
@@ -100,11 +101,21 @@ export default function ConversationPage({
       )
       .subscribe();
 
-    // Nettoyage : on se désabonne en quittant la conversation
     return () => {
       supabase.removeChannel(channel);
     };
   }, [id, router]);
+
+  // Marque comme lu dès qu'il y a des messages reçus non lus (fiable, après mise à jour de l'état)
+  useEffect(() => {
+    if (loading || !info) return;
+    const hasUnreadReceived = messages.some(
+      (m) => m.senderId !== info.myId && m.readAt === null
+    );
+    if (hasUnreadReceived) {
+      markConversationRead(id);
+    }
+  }, [messages, info, loading, id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
