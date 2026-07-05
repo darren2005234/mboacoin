@@ -49,6 +49,10 @@ export default function EditListingPage({
   const [amenities, setAmenities] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [rooms, setRooms] = useState("");
+  const [area, setArea] = useState("");
+  const [availableNow, setAvailableNow] = useState(true);
+  const [availableFrom, setAvailableFrom] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -58,6 +62,10 @@ export default function EditListingPage({
         setLoading(false);
         return;
       }
+      setRooms(data.rooms != null ? String(data.rooms) : "");
+      setArea(data.area != null ? String(data.area) : "");
+      setAvailableNow(data.availableFrom == null);
+      setAvailableFrom(data.availableFrom ?? "");
       setTitle(data.title);
       setType(data.propertyType.charAt(0).toUpperCase() + data.propertyType.slice(1));
       setCity(data.city);
@@ -99,6 +107,9 @@ export default function EditListingPage({
       amenities,
       description,
       newFiles,
+      rooms: Number(rooms) || null,
+      area: Number(area) || null,
+      availableFrom: availableNow ? null : availableFrom || null,
     });
 
     if (result.error) {
@@ -178,6 +189,7 @@ export default function EditListingPage({
             <label className="field-label">Chambres</label>
             <input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className={inputCls} />
           </div>
+
           <div>
             <label className="field-label">Avance</label>
             <input type="number" value={advance} onChange={(e) => setAdvance(e.target.value)} className={inputCls} />
@@ -186,6 +198,37 @@ export default function EditListingPage({
             <label className="field-label">Caution</label>
             <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} />
           </div>
+        </div>
+                  <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="field-label">Pièces</label>
+            <input type="number" value={rooms} onChange={(e) => setRooms(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className="field-label">Superficie (m²)</label>
+            <input type="number" value={area} onChange={(e) => setArea(e.target.value)} className={inputCls} />
+          </div>
+        </div>
+
+        <div>
+          <label className="field-label">Disponibilité</label>
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+            <input
+              type="checkbox"
+              checked={availableNow}
+              onChange={(e) => setAvailableNow(e.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span className="text-sm font-medium">Disponible immédiatement</span>
+          </label>
+          {!availableNow && (
+            <input
+              type="date"
+              value={availableFrom}
+              onChange={(e) => setAvailableFrom(e.target.value)}
+              className={`mt-2 ${inputCls}`}
+            />
+          )}
         </div>
 
         <div>

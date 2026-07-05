@@ -15,6 +15,9 @@ export interface EditableListing {
   electricity: string | null;
   amenities: string[];
   description: string | null;
+  rooms: number | null;
+  area: number | null;
+  availableFrom: string | null;
 }
 
 /** Charge une annonce pour l'édition (seulement si on en est le propriétaire). */
@@ -30,7 +33,7 @@ export async function getListingForEdit(
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id"
+      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from"
     )
     .eq("id", listingId)
     .maybeSingle();
@@ -53,6 +56,9 @@ export async function getListingForEdit(
     electricity: data.electricity,
     amenities: data.amenities ?? [],
     description: data.description,
+    rooms: data.rooms,
+    area: data.area,
+    availableFrom: data.available_from,
   };
 }
 
@@ -72,6 +78,9 @@ export interface UpdateListingInput {
   amenities: string[];
   description: string;
   newFiles: File[];
+  rooms: number | null;
+  area: number | null;
+  availableFrom: string | null;
 }
 
 /** Met à jour une annonce et ajoute d'éventuelles nouvelles photos. */
@@ -103,6 +112,9 @@ export async function updateListing(
       electricity: input.electricity,
       amenities: input.amenities,
       description: input.description,
+      rooms: input.rooms,
+      area: input.area,
+      available_from: input.availableFrom,
     })
     .eq("id", listingId);
 
