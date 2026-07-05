@@ -16,6 +16,9 @@ export interface NewListingInput {
   amenities: string[];
   description: string;
   files: File[];
+  rooms: number | null;
+  area: number | null;
+  availableFrom: string | null;
 }
 
 export interface CreateListingResult {
@@ -69,6 +72,9 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       description: input.description,
       image_url: firstUrl,
       status: "publiee",
+      rooms: input.rooms,
+      area: input.area,
+      available_from: input.availableFrom,
     })
     .select("id")
     .single();

@@ -30,6 +30,10 @@ export default function PublishPage() {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rooms, setRooms] = useState("");
+  const [availableNow, setAvailableNow] = useState(true);
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [area, setArea] = useState("");
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []).slice(0, 6);
@@ -66,6 +70,9 @@ export default function PublishPage() {
       electricity: String(form.get("electricity")) || null,
       amenities,
       description: description,
+      rooms: Number(rooms) || null,
+      availableFrom: availableNow ? null : availableFrom || null,
+      area: Number(area) || null,
       files,
     }); 
 
@@ -131,9 +138,37 @@ export default function PublishPage() {
         <Field name="price" label="Loyer mensuel (FCFA)" type="number" placeholder="150000" required />
 
         <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label htmlFor="rooms" className="field-label">Pièces</label>
+            <input
+              id="rooms"
+              type="number"
+              value={rooms}
+              onChange={(e) => setRooms(e.target.value)}
+              placeholder="3"
+              className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+            />
+          </div>
           <Field name="bedrooms" label="Chambres" type="number" placeholder="2" />
-          <Field name="advance" label="Avance" type="number" placeholder="3" />
-          <Field name="deposit" label="Caution" type="number" placeholder="2" />
+          <Field name="bathrooms" label="Douches" type="number" placeholder="1" />
+        </div>
+        <div>
+          <label htmlFor="area" className="field-label">
+            Superficie (m²) <span className="font-normal text-muted-foreground">(optionnel)</span>
+          </label>
+          <input
+            id="area"
+            type="number"
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            placeholder="Ex : 75"
+            className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field name="advance" label="Avance (mois)" type="number" placeholder="3" />
+          <Field name="deposit" label="Caution (mois)" type="number" placeholder="2" />
         </div>
 
         {/* Ameublement (obligatoire) */}
@@ -180,8 +215,6 @@ export default function PublishPage() {
             </select>
           </div>
         </div>
-
-        <Field name="bathrooms" label="Salles d'eau (douches)" type="number" placeholder="2" />
 
         {/* Commodités (cases à cocher) */}
         <div>
@@ -231,6 +264,26 @@ export default function PublishPage() {
             placeholder="Décrivez le bien : commodités (eau, électricité), quartier, conditions, ce qui le rend unique..."
             className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
           />
+        </div>
+        <div>
+          <label className="field-label">Disponibilité</label>
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+            <input
+              type="checkbox"
+              checked={availableNow}
+              onChange={(e) => setAvailableNow(e.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span className="text-sm font-medium">Disponible immédiatement</span>
+          </label>
+          {!availableNow && (
+            <input
+              type="date"
+              value={availableFrom}
+              onChange={(e) => setAvailableFrom(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+            />
+          )}
         </div>
 
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}

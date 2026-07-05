@@ -39,7 +39,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles(full_name, verification, avatar_url), media:listing_media(storage_path, position)"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles(full_name, verification, avatar_url), media:listing_media(storage_path, position)"
     )
     .eq("id", id)
     .eq("status", "publiee")
@@ -65,6 +65,10 @@ export async function getListingById(id: string) {
     images: gallery,
     bedrooms: data.bedrooms ?? null,
     bathrooms: data.bathrooms ?? null,
+    rooms: data.rooms ?? null,
+    area: data.area ?? null,
+    availableFrom: data.available_from ?? null,
+    reference: (data as { reference: string }).reference,
     advanceMonths: data.advance_months ?? null,
     depositMonths: data.deposit_months ?? null,
     furnishing: (data.furnishing as string | null) ?? null,

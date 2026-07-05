@@ -11,6 +11,9 @@ import { ListingFeatures } from "@/components/mboacoin/listing-features";
 import { ContactButton } from "@/components/mboacoin/contact-button";
 import { BackButton } from "@/components/mboacoin/back-button";
 import { Avatar } from "@/components/mboacoin/avatar";
+import { ReportDialog } from "@/components/mboacoin/report-dialog";
+import { createClient } from "@/lib/supabase/server";
+import { Icon } from "@/components/mboacoin/icon";
 
 export default async function ListingDetailPage({
   params,
@@ -19,7 +22,12 @@ export default async function ListingDetailPage({
 }) {
   const { id } = await params;
   const listing = await getListingById(id);
+  const supabase = await createClient();
   if (!listing) notFound();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isOwner = user?.id === listing.ownerId;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -35,6 +43,14 @@ export default async function ListingDetailPage({
           <div className="pt-1">
             <Price amount={listing.price} suffix={listing.priceSuffix} size="lg" />
           </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <Icon name="event_available" size={18} className="text-accent" />
+          <span className="font-medium">
+            {listing.availableFrom
+              ? `Disponible à partir du ${new Date(listing.availableFrom).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
+              : "Disponible immédiatement"}
+          </span>
         </div>
 
         {/* Conditions financières : affichées seulement si renseignées */}
@@ -75,6 +91,8 @@ export default async function ListingDetailPage({
         </Link>
         <ListingFeatures
           features={{
+            rooms: listing.rooms,
+            area: listing.area,
             bedrooms: listing.bedrooms,
             bathrooms: listing.bathrooms,
             furnishing: listing.furnishing,
@@ -88,6 +106,14 @@ export default async function ListingDetailPage({
           <div className="space-y-2">
             <h2 className="text-sm font-bold">Description</h2>
             <ExpandableText text={listing.description} />
+          </div>
+        )}
+        <p className="text-center text-xs text-muted-foreground">
+          Référence : {listing.reference}
+        </p>
+        {!isOwner && (
+          <div className="flex justify-center pt-2">
+            <ReportDialog targetType="listing" targetId={listing.id} label="Signaler cette annonce" />
           </div>
         )}
       </div>

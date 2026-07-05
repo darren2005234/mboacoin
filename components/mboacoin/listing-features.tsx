@@ -7,6 +7,8 @@ interface Features {
   water: string | null;
   electricity: string | null;
   amenities: string[];
+  rooms: number | null;
+  area: number | null;
 }
 
 /** Libellés lisibles pour les valeurs stockées. */
@@ -51,10 +53,12 @@ function Row({ icon, children }: { icon: string; children: React.ReactNode }) {
 }
 
 export function ListingFeatures({ features }: { features: Features }) {
-  const { bedrooms, bathrooms, furnishing, water, electricity, amenities } = features;
+  const { rooms, area, bedrooms, bathrooms, furnishing, water, electricity, amenities } = features;
 
   // Caractéristiques principales (on n'affiche que ce qui est renseigné)
   const main: { icon: string; label: string }[] = [];
+  if (area) main.push({ icon: "straighten", label: `${area} m²` });
+  if (rooms) main.push({ icon: "meeting_room", label: `${rooms} pièce${rooms > 1 ? "s" : ""}` });
   if (bedrooms) main.push({ icon: "bed", label: `${bedrooms} chambre${bedrooms > 1 ? "s" : ""}` });
   if (bathrooms) main.push({ icon: "bathtub", label: `${bathrooms} salle${bathrooms > 1 ? "s" : ""} d'eau` });
   if (furnishing) main.push({ icon: "chair", label: FURNISHING[furnishing] ?? furnishing });
