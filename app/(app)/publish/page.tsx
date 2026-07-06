@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
@@ -21,19 +21,123 @@ const AMENITIES = [
   "Cuisine équipée",
 ];
 
+const DRAFT_KEY = "mboacoin-draft-annonce";
+
 export default function PublishPage() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [type, setType] = useState("Studio");
-  const [description, setDescription] = useState("");
-  const [furnishing, setFurnishing] = useState("non_meuble");
-  const [amenities, setAmenities] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [city, setCity] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [address, setAddress] = useState("");
+  const [price, setPrice] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
   const [rooms, setRooms] = useState("");
+  const [area, setArea] = useState("");
+  const [advance, setAdvance] = useState("");
+  const [deposit, setDeposit] = useState("");
+  const [furnishing, setFurnishing] = useState("non_meuble");
+  const [water, setWater] = useState("");
+  const [electricity, setElectricity] = useState("");
+  const [amenities, setAmenities] = useState<string[]>([]);
   const [availableNow, setAvailableNow] = useState(true);
   const [availableFrom, setAvailableFrom] = useState("");
-  const [area, setArea] = useState("");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Restauration : true = brouillon détecté, on propose de reprendre
+  const [draftFound, setDraftFound] = useState(false);
+  // "checking" = on regarde s'il y a un brouillon ; "blocked" = bandeau affiché, saisie non reprise ; "active" = on peut sauvegarder
+  const [saveMode, setSaveMode] = useState<"checking" | "blocked" | "active">("checking");
+
+// Au chargement : détecter un brouillon sauvegardé
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.title || d.description || d.city || d.price) {
+          setDraftFound(true);
+          setSaveMode("blocked"); // on bloque la sauvegarde tant qu'on n'a pas décidé
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    setSaveMode("active"); // pas de brouillon : on peut sauvegarder normalement
+  }, []);
+
+// Sauvegarde automatique, seulement en mode "active"
+  useEffect(() => {
+    if (saveMode !== "active") return;
+    const data = {
+      type, title, city, neighborhood, address, price, bedrooms, bathrooms,
+      rooms, area, advance, deposit, furnishing, water, electricity,
+      amenities, availableNow, availableFrom, description,
+    };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch {
+      // ignore
+    }
+  }, [
+    saveMode, type, title, city, neighborhood, address, price, bedrooms, bathrooms,
+    rooms, area, advance, deposit, furnishing, water, electricity,
+    amenities, availableNow, availableFrom, description,
+  ]);
+
+function restoreDraft() {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (!saved) return;
+      const d = JSON.parse(saved);
+      setType(d.type ?? "Studio");
+      setTitle(d.title ?? "");
+      setCity(d.city ?? "");
+      setNeighborhood(d.neighborhood ?? "");
+      setAddress(d.address ?? "");
+      setPrice(d.price ?? "");
+      setBedrooms(d.bedrooms ?? "");
+      setBathrooms(d.bathrooms ?? "");
+      setRooms(d.rooms ?? "");
+      setArea(d.area ?? "");
+      setAdvance(d.advance ?? "");
+      setDeposit(d.deposit ?? "");
+      setFurnishing(d.furnishing ?? "non_meuble");
+      setWater(d.water ?? "");
+      setElectricity(d.electricity ?? "");
+      setAmenities(Array.isArray(d.amenities) ? d.amenities : []);
+      setAvailableNow(d.availableNow ?? true);
+      setAvailableFrom(d.availableFrom ?? "");
+      setDescription(d.description ?? "");
+    } catch {
+      // ignore
+    }
+    setDraftFound(false);
+    setSaveMode("active"); // à partir de maintenant, on sauvegarde les modifications
+  }
+
+  function discardDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+    setDraftFound(false);
+    setSaveMode("active"); // on repart de zéro, sauvegarde active
+  }
+
+  function clearDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+  }
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []).slice(0, 6);
@@ -47,12 +151,11 @@ export default function PublishPage() {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const form = new FormData(e.currentTarget);
 
-    const titleV = String(form.get("title")).trim();
-    const cityV = String(form.get("city")).trim();
-    const neighborhoodV = String(form.get("neighborhood")).trim();
-    const priceV = Number(form.get("price"));
+    const titleV = title.trim();
+    const cityV = city.trim();
+    const neighborhoodV = neighborhood.trim();
+    const priceV = Number(price);
 
     // Validation des champs obligatoires
     if (files.length === 0) {
@@ -86,17 +189,17 @@ export default function PublishPage() {
       propertyType: type,
       city: cityV,
       neighborhood: neighborhoodV,
-      addressDescription: String(form.get("address")) || null,
+      addressDescription: address.trim() || null,
       price: priceV,
-      bedrooms: Number(form.get("bedrooms")) || 0,
-      bathrooms: Number(form.get("bathrooms")) || 0,
+      bedrooms: Number(bedrooms) || 0,
+      bathrooms: Number(bathrooms) || 0,
       rooms: Number(rooms) || null,
       area: Number(area) || null,
-      advanceMonths: Number(form.get("advance")) || 1,
-      depositMonths: Number(form.get("deposit")) || 1,
+      advanceMonths: Number(advance) || 1,
+      depositMonths: Number(deposit) || 1,
       furnishing,
-      water: String(form.get("water")) || null,
-      electricity: String(form.get("electricity")) || null,
+      water: water || null,
+      electricity: electricity || null,
       amenities,
       availableFrom: availableNow ? null : availableFrom || null,
       description: description,
@@ -108,12 +211,31 @@ export default function PublishPage() {
       setLoading(false);
       return;
     }
+    clearDraft(); // publication réussie : on efface le brouillon
     router.push(`/listings/${result.id}`);
   }
+
+  const inputCls =
+    "w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
 
   return (
     <div className="flex flex-col pb-8">
       <ScreenHeader title="Publier une annonce" subtitle="Décrivez votre bien pour le mettre en ligne." />
+
+      {/* Bandeau de reprise de brouillon */}
+      {draftFound && (
+        <div className="mx-5 mb-2 rounded-xl border border-accent/30 bg-accent/5 p-3">
+          <p className="text-sm font-bold">Reprendre votre annonce ?</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Vous avez une annonce non terminée. Souhaitez-vous la reprendre là où vous vous êtes arrêté ?
+          </p>
+          <div className="mt-2.5 flex gap-2">
+            <Button size="sm" className="flex-1" onClick={restoreDraft}>Reprendre</Button>
+            <Button size="sm" variant="outline" className="flex-1" onClick={discardDraft}>Recommencer</Button>
+          </div>
+        </div>
+      )}
+
       <p className="px-5 pb-1 text-xs text-muted-foreground">
         Les champs marqués d&apos;un <span className="text-destructive">*</span> sont obligatoires.
       </p>
@@ -157,26 +279,74 @@ export default function PublishPage() {
           </div>
         </div>
 
-        <Field name="title" label="Titre" placeholder="Ex : Appartement standing" required/>
+        {/* Titre */}
+        <div>
+          <label htmlFor="title" className="field-label">
+            Titre<span className="text-destructive"> *</span>
+          </label>
+          <input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex : Appartement standing"
+            className={inputCls}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field name="city" label="Ville" placeholder="Douala" required/>
-          <Field name="neighborhood" label="Quartier" placeholder="Akwa" required/>
+          <div>
+            <label htmlFor="city" className="field-label">
+              Ville<span className="text-destructive"> *</span>
+            </label>
+            <input
+              id="city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Douala"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="neighborhood" className="field-label">
+              Quartier<span className="text-destructive"> *</span>
+            </label>
+            <input
+              id="neighborhood"
+              value={neighborhood}
+              onChange={(e) => setNeighborhood(e.target.value)}
+              placeholder="Akwa"
+              className={inputCls}
+            />
+          </div>
         </div>
+
         <div>
           <label htmlFor="address" className="field-label">
             Adresse / indications <span className="font-normal text-muted-foreground">(facultatif)</span>
           </label>
           <textarea
             id="address"
-            name="address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
             rows={2}
             placeholder="Ex : derrière la station Total, à 100m du carrefour Ndokoti"
             className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
           />
         </div>
 
-        <Field name="price" label="Loyer mensuel (FCFA)" type="number" placeholder="150000" required/>
+        <div>
+          <label htmlFor="price" className="field-label">
+            Loyer mensuel (FCFA)<span className="text-destructive"> *</span>
+          </label>
+          <input
+            id="price"
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="150000"
+            className={inputCls}
+          />
+        </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
@@ -187,12 +357,33 @@ export default function PublishPage() {
               value={rooms}
               onChange={(e) => setRooms(e.target.value)}
               placeholder="3"
-              className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+              className={inputCls}
             />
           </div>
-          <Field name="bedrooms" label="Chambres" type="number" placeholder="2" />
-          <Field name="bathrooms" label="Douches" type="number" placeholder="1" />
+          <div>
+            <label htmlFor="bedrooms" className="field-label">Chambres</label>
+            <input
+              id="bedrooms"
+              type="number"
+              value={bedrooms}
+              onChange={(e) => setBedrooms(e.target.value)}
+              placeholder="2"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="bathrooms" className="field-label">Douches</label>
+            <input
+              id="bathrooms"
+              type="number"
+              value={bathrooms}
+              onChange={(e) => setBathrooms(e.target.value)}
+              placeholder="1"
+              className={inputCls}
+            />
+          </div>
         </div>
+
         <div>
           <label htmlFor="area" className="field-label">
             Superficie (m²) <span className="font-normal text-muted-foreground">(optionnel)</span>
@@ -203,23 +394,43 @@ export default function PublishPage() {
             value={area}
             onChange={(e) => setArea(e.target.value)}
             placeholder="Ex : 75"
-            className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+            className={inputCls}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field name="advance" label="Avance (mois)" type="number" placeholder="3" />
-          <Field name="deposit" label="Caution (mois)" type="number" placeholder="2" />
+          <div>
+            <label htmlFor="advance" className="field-label">Avance (mois)</label>
+            <input
+              id="advance"
+              type="number"
+              value={advance}
+              onChange={(e) => setAdvance(e.target.value)}
+              placeholder="3"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="deposit" className="field-label">Caution (mois)</label>
+            <input
+              id="deposit"
+              type="number"
+              value={deposit}
+              onChange={(e) => setDeposit(e.target.value)}
+              placeholder="2"
+              className={inputCls}
+            />
+          </div>
         </div>
 
-        {/* Ameublement (obligatoire) */}
+        {/* Ameublement */}
         <div>
           <label htmlFor="furnishing" className="field-label">Ameublement</label>
           <select
             id="furnishing"
             value={furnishing}
             onChange={(e) => setFurnishing(e.target.value)}
-            className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+            className={inputCls}
           >
             <option value="non_meuble">Non meublé</option>
             <option value="semi_meuble">Semi-meublé</option>
@@ -227,13 +438,14 @@ export default function PublishPage() {
           </select>
         </div>
 
-        {/* Eau et électricité (optionnels) */}
+        {/* Eau et électricité */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="water" className="field-label">Eau</label>
             <select
               id="water"
-              name="water"
+              value={water}
+              onChange={(e) => setWater(e.target.value)}
               className="w-full rounded-xl border border-input bg-card px-3 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
             >
               <option value="">Non précisé</option>
@@ -246,7 +458,8 @@ export default function PublishPage() {
             <label htmlFor="electricity" className="field-label">Électricité</label>
             <select
               id="electricity"
-              name="electricity"
+              value={electricity}
+              onChange={(e) => setElectricity(e.target.value)}
               className="w-full rounded-xl border border-input bg-card px-3 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
             >
               <option value="">Non précisé</option>
@@ -257,7 +470,7 @@ export default function PublishPage() {
           </div>
         </div>
 
-        {/* Commodités (cases à cocher) */}
+        {/* Commodités */}
         <div>
           <label className="field-label">Commodités</label>
           <div className="flex flex-wrap gap-2">
@@ -297,7 +510,6 @@ export default function PublishPage() {
           </div>
           <textarea
             id="description"
-            name="description"
             rows={5}
             maxLength={1500}
             value={description}
@@ -306,6 +518,8 @@ export default function PublishPage() {
             className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
           />
         </div>
+
+        {/* Disponibilité */}
         <div>
           <label className="field-label">Disponibilité</label>
           <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
@@ -333,36 +547,6 @@ export default function PublishPage() {
           {loading ? "Publication en cours..." : "Publier l'annonce"}
         </Button>
       </form>
-    </div>
-  );
-}
-
-function Field({
-  name,
-  label,
-  placeholder,
-  type = "text",
-  required,
-}: {
-  name: string;
-  label: string;
-  placeholder?: string;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label htmlFor={name} className="field-label">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        placeholder={placeholder}
-        className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
-      />
     </div>
   );
 }
