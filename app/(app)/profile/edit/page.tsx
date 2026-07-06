@@ -1,0 +1,98 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ScreenHeader } from "@/components/mboacoin/screen-header";
+import { Button } from "@/components/ui/button";
+import { getMyProfileForEdit, updateMyProfile } from "@/lib/edit-profile";
+
+export default function EditProfilePage() {
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [city, setCity] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const data = await getMyProfileForEdit();
+      if (!data) {
+        router.push("/login");
+        return;
+      }
+      setFullName(data.fullName);
+      setCity(data.city);
+      setEmail(data.email);
+      setLoading(false);
+    })();
+  }, [router]);
+
+  async function save() {
+    setError(null);
+    if (!fullName.trim()) {
+      setError("Le nom est requis.");
+      return;
+    }
+    setSaving(true);
+    const result = await updateMyProfile({ fullName, city, email });
+    if (result.error) {
+      setError(result.error);
+      setSaving(false);
+      return;
+    }
+    setSaved(true);
+    setSaving(false);
+    setTimeout(() => router.push("/profile"), 800);
+  }
+
+  const inputCls =
+    "w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
+
+  if (loading) {
+    return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
+  }
+
+  return (
+    <div className="flex flex-col pb-8">
+      <ScreenHeader title="Modifier mon profil" subtitle="Mettez à jour vos informations." />
+
+      <div className="space-y-5 px-5">
+        <div>
+          <label className="field-label">Nom complet</label>
+          <input value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} placeholder="Ex : Darren Touopi" />
+        </div>
+
+        <div>
+          <label className="field-label">Ville</label>
+          <input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} placeholder="Ex : Douala" />
+        </div>
+
+        <div>
+          <label className="field-label">
+            Adresse e-mail <span className="font-normal text-muted-foreground">(facultatif)</span>
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputCls}
+            placeholder="votre@email.com"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Une adresse secondaire pour être contacté ou retrouver votre compte.
+          </p>
+        </div>
+
+        {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+        {saved && <p className="text-sm font-medium text-ok-text">Profil mis à jour.</p>}
+
+        <Button size="lg" className="w-full" onClick={save} disabled={saving}>
+          {saving ? "Enregistrement..." : "Enregistrer"}
+        </Button>
+      </div>
+    </div>
+  );
+}

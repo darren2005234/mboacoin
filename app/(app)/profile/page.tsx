@@ -30,7 +30,7 @@ export default async function ProfilePage() {
       </div>
 
       <div className="space-y-2 px-5">
-        <MenuRow icon="person" label="Modifier mon profil" />
+        <MenuRow icon="edit" label="Modifier mon profil" href="/profile/edit" />
         <MenuRow icon="verified_user" label="Vérifier mon identité" />
         <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
         <MenuRow icon="settings" label="Paramètres" />
