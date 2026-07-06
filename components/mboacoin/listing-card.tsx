@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Price } from "./price";
 import { TrustSeal } from "./trust-seal";
 import { toggleFavorite } from "@/lib/favorites";
+import { Icon } from "@/components/mboacoin/icon";
 
 export interface Listing {
   id: string;
@@ -20,6 +21,9 @@ export interface Listing {
   verified?: boolean;
   bedrooms?: number;
   favorite?: boolean;
+  bathrooms?: number;
+  rooms?: number;
+  area?: number;
 }
 
 interface ListingCardProps {
@@ -27,10 +31,11 @@ interface ListingCardProps {
   onOpen?: (id: string) => void;
   className?: string;
   initialFavorited?: boolean;
+  unavailable?: boolean;
 }
 
 /** Carte d'annonce. Sceau doré si vérifiée, prix en Space Grotesk, navigation intégrée. */
-export function ListingCard({ listing, onOpen, className, initialFavorited }: ListingCardProps) {
+export function ListingCard({ listing, onOpen, className, initialFavorited, unavailable }: ListingCardProps) {
   const router = useRouter();
   const [fav, setFav] = useState(Boolean(initialFavorited));
   const [pending, setPending] = useState(false);
@@ -81,10 +86,15 @@ export function ListingCard({ listing, onOpen, className, initialFavorited }: Li
           src={listing.image}
           alt=""
           fill
-          className="object-cover"
+          className={cn("object-cover", unavailable && "opacity-40 grayscale")}
           sizes="(max-width:768px) 100vw, 360px"
         />
-        {listing.verified && (
+        {unavailable && (
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/80 px-4 py-1.5 text-xs font-bold text-white">
+            Louée
+          </span>
+        )}
+        {listing.verified && !unavailable && (
           <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-lg bg-card/90 px-2 py-1 text-[10px] font-bold text-seal-text backdrop-blur">
             <TrustSeal size={13} /> Vérifiée
           </span>
@@ -108,11 +118,30 @@ export function ListingCard({ listing, onOpen, className, initialFavorited }: Li
         <p className="flex items-center gap-1 text-[13px] text-muted-foreground">
           <MapPin className="size-3" /> {listing.location}
         </p>
-        {listing.bedrooms ? (
-          <p className="mt-2 flex items-center gap-1 border-t border-border pt-2 text-[13px] font-medium text-foreground/70">
-            <BedDouble className="size-3.5 text-accent" /> {listing.bedrooms} chambres
-          </p>
-        ) : null}
+        {(listing.area || listing.rooms || listing.bedrooms || listing.bathrooms) && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-[13px] font-medium text-foreground/70">
+            {listing.area ? (
+              <span className="flex items-center gap-1">
+                <Icon name="straighten" size={15} className="text-accent" /> {listing.area} m²
+              </span>
+            ) : null}
+            {listing.rooms ? (
+              <span className="flex items-center gap-1">
+                <Icon name="meeting_room" size={15} className="text-accent" /> {listing.rooms} pièce{listing.rooms > 1 ? "s" : ""}
+              </span>
+            ) : null}
+            {listing.bedrooms ? (
+              <span className="flex items-center gap-1">
+                <Icon name="bed" size={15} className="text-accent" /> {listing.bedrooms}
+              </span>
+            ) : null}
+            {listing.bathrooms ? (
+              <span className="flex items-center gap-1">
+                <Icon name="bathtub" size={15} className="text-accent" /> {listing.bathrooms}
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
     </article>
   );

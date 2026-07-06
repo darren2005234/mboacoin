@@ -34,6 +34,8 @@ export default async function ProfilePage() {
         <MenuRow icon="verified_user" label="Vérifier mon identité" />
         <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
         <MenuRow icon="settings" label="Paramètres" />
+        <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
+        <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
       </div>
 
       <div className="p-5">

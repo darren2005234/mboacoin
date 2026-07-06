@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function completeProfile(formData: FormData) {
   const fullName = String(formData.get("full_name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
+  
 
   if (!fullName) {
     return { error: "Le nom est obligatoire." };
@@ -22,7 +23,7 @@ export async function completeProfile(formData: FormData) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .update({ full_name: fullName, city: city || null })
+    .update({ full_name: fullName, city: city || null, terms_accepted_at: new Date().toISOString(),})
     .eq("id", user.id)
     .select();
 

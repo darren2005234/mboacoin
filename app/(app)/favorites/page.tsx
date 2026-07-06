@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
 export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [favorites, setFavorites] = useState<(Listing & { available: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(true);
 
@@ -54,7 +54,7 @@ export default function FavoritesPage() {
       ) : (
         <div className="space-y-4 px-5 pb-8">
           {favorites.map((l) => (
-            <ListingCard key={l.id} listing={l} initialFavorited={true} />
+            <ListingCard key={l.id} listing={l} initialFavorited={true} unavailable={!l.available} />
           ))}
         </div>
       )}

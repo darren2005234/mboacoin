@@ -12,8 +12,9 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(false);
 
-  const isValid = phone.length >= 8;
+  const isValid = phone.length >= 8 && accepted;
 
   async function submit() {
     setError(null);
@@ -43,6 +44,25 @@ export default function LoginPage() {
         <div className="mt-8 space-y-4">
           <PhoneField value={phone} onChange={setPhone} />
           {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
+          <label className="flex items-start gap-2.5 text-left">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-primary"
+            />
+            <span className="text-xs leading-relaxed text-muted-foreground">
+              J&apos;ai lu et j&apos;accepte les{" "}
+              <a href="/legal/conditions" target="_blank" className="font-semibold text-primary underline">
+                Conditions d&apos;utilisation
+              </a>{" "}
+              et la{" "}
+              <a href="/legal/confidentialite" target="_blank" className="font-semibold text-primary underline">
+                Politique de confidentialité
+              </a>
+              .
+            </span>
+          </label>
           <Button size="lg" className="w-full" onClick={submit} disabled={!isValid || loading}>
             {loading ? "Envoi en cours..." : "Recevoir le code"}
           </Button>

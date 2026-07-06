@@ -25,15 +25,57 @@ export default async function ListingDetailPage({
 }) {
   const { id } = await params;
   const listing = await getListingById(id);
-  if (!listing) notFound();
-  const favoritesCount = await countFavoritesServer(listing.id);
   const favoriteIds = await getMyFavoriteIdsServer();
-  const isFavorited = favoriteIds.has(listing.id);
+  
   const supabase = await createClient();
-  const {
+ 
+    const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!listing) notFound();
   const isOwner = user?.id === listing.ownerId;
+  const favoritesCount = await countFavoritesServer(listing.id);
+  const isFavorited = favoriteIds.has(listing.id);
+  if (!listing.available) {
+    if (isOwner) {
+      return (
+        <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-20 text-center">
+          <div className="grid size-16 place-items-center rounded-full bg-pending-bg">
+            <Icon name="task_alt" size={32} className="text-pending-text" filled={false} />
+          </div>
+          <h1 className="text-lg font-extrabold">Annonce marquée comme louée</h1>
+          <p className="text-sm text-muted-foreground">
+            Cette annonce n&apos;est plus visible publiquement. Vous pouvez la remettre en ligne ou la gérer à tout moment.
+          </p>
+          <div className="mt-2 flex flex-col gap-2">
+            <Link
+              href="/my-listings"
+              className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-btn"
+            >
+              Gérer mes annonces
+            </Link>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-20 text-center">
+        <div className="grid size-16 place-items-center rounded-full bg-secondary">
+          <Icon name="do_not_disturb_on" size={32} className="text-muted-foreground" filled={false} />
+        </div>
+        <h1 className="text-lg font-extrabold">Annonce non disponible</h1>
+        <p className="text-sm text-muted-foreground">
+          Cette annonce a été louée ou retirée par son propriétaire.
+        </p>
+        <Link
+          href="/explore"
+          className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-btn"
+        >
+          Voir d&apos;autres annonces
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-full flex-col">

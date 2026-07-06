@@ -12,11 +12,10 @@ export async function getConversation(conversationId: string) {
   const { data, error } = await supabase
     .from("conversations")
     .select(
-      "id, tenant_id, owner_id, listing:listings(id, title, price, image_url, neighborhood, city), tenant:profiles!conversations_tenant_id_fkey(full_name, city, verification, created_at, avatar_url), owner:profiles!conversations_owner_id_fkey(full_name, city, verification, created_at, avatar_url)"
+      "id, tenant_id, owner_id, listing:listings(id, title, price, image_url, neighborhood, city, status), tenant:profiles!conversations_tenant_id_fkey(full_name, city, verification, created_at, avatar_url), owner:profiles!conversations_owner_id_fkey(full_name, city, verification, created_at, avatar_url)"
     )
     .eq("id", conversationId)
     .maybeSingle();
-
   if (error || !data) return null;
 
   const listing = Array.isArray(data.listing) ? data.listing[0] : data.listing;
@@ -36,6 +35,7 @@ export async function getConversation(conversationId: string) {
       price: listing?.price ?? 0,
       image: listing?.image_url ?? null,
       location: [listing?.neighborhood, listing?.city].filter(Boolean).join(", "),
+      available: listing?.status === "publiee",
     },
     other: {
       name: other?.full_name ?? "Utilisateur",
@@ -99,21 +99,6 @@ export async function sendMessage(conversationId: string, body: string) {
   return { success: true };
 }
 
-export interface ConversationSummary {
-  id: string;
-  listingTitle: string;
-  listingImage: string | null;
-  lastMessageAt: string;
-}
-
-/** Liste les conversations de l'utilisateur (locataire ou bailleur), plus récentes d'abord. */
-export interface ConversationSummary {
-  id: string;
-  listingTitle: string;
-  listingImage: string | null;
-  lastMessageAt: string;
-  role: "bailleur" | "locataire";
-}
 
 /** Liste les conversations de l'utilisateur (locataire ou bailleur), plus récentes d'abord. */
 export interface ConversationSummary {

@@ -163,20 +163,38 @@ export default function ConversationPage({
       {info?.listing && (
         <Link
           href={`/listings/${info.listing.id}`}
-          className="flex items-center gap-3 border-b border-border bg-secondary/40 px-4 py-2.5"
+          className="relative flex items-center gap-3 border-b border-border bg-secondary/40 px-4 py-2.5"
         >
           <div className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-secondary">
             {info.listing.image && (
-              <Image src={info.listing.image} alt="" fill className="object-cover" sizes="44px" />
+              <Image
+                src={info.listing.image}
+                alt=""
+                fill
+                className={`object-cover ${!info.listing.available ? "opacity-40 grayscale" : ""}`}
+                sizes="44px"
+              />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-1 text-xs font-bold">{info.listing.title}</p>
-            <p className="text-[11px] text-muted-foreground">{info.listing.location}</p>
+            <p className={`line-clamp-1 text-xs font-bold ${!info.listing.available ? "text-muted-foreground" : ""}`}>
+              {info.listing.title}
+            </p>
+            {info.listing.available ? (
+              <p className="text-[11px] text-muted-foreground">{info.listing.location}</p>
+            ) : (
+              <p className="text-[11px] font-semibold text-pending-text">
+                {info.otherIsOwner
+                  ? "Cette annonce n'est plus disponible"
+                  : "Vous avez marqué cette annonce comme louée"}
+              </p>
+            )}
           </div>
-          <p className="shrink-0 font-mono text-xs font-bold text-primary">
-            {new Intl.NumberFormat("fr-FR").format(info.listing.price)} F
-          </p>
+          {info.listing.available && (
+            <p className="shrink-0 font-mono text-xs font-bold text-primary">
+              {new Intl.NumberFormat("fr-FR").format(info.listing.price)} F
+            </p>
+          )}
         </Link>
       )}
 

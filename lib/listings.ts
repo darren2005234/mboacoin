@@ -8,7 +8,7 @@ export async function getPublishedListings(): Promise<Listing[]> {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification)"
+      "id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification), bathrooms, rooms, area"
     )
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -29,6 +29,9 @@ export async function getPublishedListings(): Promise<Listing[]> {
       image: row.image_url ?? "/img/listings/demo-1.jpg",
       bedrooms: row.bedrooms ?? undefined,
       verified: owner?.verification === "verifie",
+      bathrooms: row.bathrooms ?? undefined,
+      rooms: row.rooms ?? undefined,
+      area: row.area ?? undefined,
     };
   });
 }
@@ -42,7 +45,6 @@ export async function getListingById(id: string) {
       "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position)"
     )
     .eq("id", id)
-    .eq("status", "publiee")
     .maybeSingle();
 
   if (error || !data) return null;
@@ -79,6 +81,7 @@ export async function getListingById(id: string) {
     ownerAvatar: owner?.avatar_url ?? null,
     verified: owner?.verification === "verifie",
     ownerId: data.owner_id,
+    available: data.status === "publiee",
   };
 }
 

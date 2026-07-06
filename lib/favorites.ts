@@ -65,7 +65,7 @@ export async function countFavorites(listingId: string): Promise<number> {
 }
 
 /** Récupère les annonces mises en favori par l'utilisateur courant. */
-export async function getMyFavorites(): Promise<Listing[]> {
+export async function getMyFavorites(): Promise<(Listing & { available: boolean })[]> {
   const supabase = createClient();
   const {
     data: { user },
@@ -85,7 +85,7 @@ export async function getMyFavorites(): Promise<Listing[]> {
   return (data ?? [])
     .map((row) => {
       const l = Array.isArray(row.listing) ? row.listing[0] : row.listing;
-      if (!l || l.status !== "publiee") return null; // on n'affiche que les annonces encore en ligne
+      if (!l) return null;
       const owner = Array.isArray(l.owner) ? l.owner[0] : l.owner;
       return {
         id: l.id,
@@ -96,8 +96,8 @@ export async function getMyFavorites(): Promise<Listing[]> {
         image: l.image_url ?? "/img/listings/demo-1.jpg",
         bedrooms: l.bedrooms ?? undefined,
         verified: owner?.verification === "verifie",
+        available: l.status === "publiee",
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 }
-
