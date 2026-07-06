@@ -9,6 +9,7 @@ export interface PublicProfile {
   verified: boolean;
   memberSince: string | null;
   listings: Listing[];
+  bio: string | null
 }
 
 /** Récupère le profil public d'un utilisateur et ses annonces publiées. */
@@ -17,7 +18,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, full_name, city, avatar_url, verification, created_at")
+    .select("id, full_name, city, avatar_url, verification, created_at, bio")
     .eq("id", userId)
     .maybeSingle();
 
@@ -51,5 +52,6 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
     verified,
     memberSince: profile.created_at,
     listings,
+    bio: profile.bio ?? null,
   };
 }

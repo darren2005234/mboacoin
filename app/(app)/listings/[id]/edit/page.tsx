@@ -53,6 +53,7 @@ export default function EditListingPage({
   const [area, setArea] = useState("");
   const [availableNow, setAvailableNow] = useState(true);
   const [availableFrom, setAvailableFrom] = useState("");
+  const [addressDescription, setAddressDescription] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -70,6 +71,7 @@ export default function EditListingPage({
       setType(data.propertyType.charAt(0).toUpperCase() + data.propertyType.slice(1));
       setCity(data.city);
       setNeighborhood(data.neighborhood);
+      setAddressDescription(data.addressDescription ?? "");
       setPrice(String(data.price));
       setBedrooms(data.bedrooms != null ? String(data.bedrooms) : "");
       setBathrooms(data.bathrooms != null ? String(data.bathrooms) : "");
@@ -110,6 +112,7 @@ export default function EditListingPage({
       rooms: Number(rooms) || null,
       area: Number(area) || null,
       availableFrom: availableNow ? null : availableFrom || null,
+      addressDescription: addressDescription.trim() || null,
     });
 
     if (result.error) {
@@ -177,7 +180,20 @@ export default function EditListingPage({
             <label className="field-label">Quartier</label>
             <input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} className={inputCls} />
           </div>
+
         </div>
+          <div>
+            <label className="field-label">
+              Adresse / indications <span className="font-normal text-muted-foreground">(facultatif)</span>
+            </label>
+            <textarea
+              value={addressDescription}
+              onChange={(e) => setAddressDescription(e.target.value)}
+              rows={2}
+              placeholder="Ex : derrière la station Total, à 100m du carrefour Ndokoti"
+              className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+            />
+          </div>
 
         <div>
           <label className="field-label">Loyer mensuel (FCFA)</label>

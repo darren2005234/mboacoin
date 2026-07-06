@@ -73,6 +73,7 @@ export default function PublishPage() {
       rooms: Number(rooms) || null,
       availableFrom: availableNow ? null : availableFrom || null,
       area: Number(area) || null,
+      addressDescription: String(form.get("address")) || null,
       files,
     }); 
 
@@ -133,6 +134,18 @@ export default function PublishPage() {
         <div className="grid grid-cols-2 gap-3">
           <Field name="city" label="Ville" placeholder="Douala" required />
           <Field name="neighborhood" label="Quartier" placeholder="Akwa" required />
+        </div>
+        <div>
+          <label htmlFor="address" className="field-label">
+            Adresse / indications <span className="font-normal text-muted-foreground">(facultatif)</span>
+          </label>
+          <textarea
+            id="address"
+            name="address"
+            rows={2}
+            placeholder="Ex : derrière la station Total, à 100m du carrefour Ndokoti"
+            className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+          />
         </div>
 
         <Field name="price" label="Loyer mensuel (FCFA)" type="number" placeholder="150000" required />

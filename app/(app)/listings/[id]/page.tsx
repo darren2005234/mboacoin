@@ -94,6 +94,12 @@ export default async function ListingDetailPage({
         <div className="space-y-1">
           <h1 className="text-xl font-extrabold leading-tight">{listing.title}</h1>
           <p className="text-sm font-medium text-muted-foreground">{listing.location}</p>
+          {listing.addressDescription && (
+          <div className="flex items-start gap-2 text-sm text-foreground/80">
+            <Icon name="location_on" size={18} className="mt-0.5 shrink-0 text-accent" />
+            <span>{listing.addressDescription}</span>
+          </div>
+          )}
           <div className="pt-1">
             <Price amount={listing.price} suffix={listing.priceSuffix} size="lg" />
           </div>

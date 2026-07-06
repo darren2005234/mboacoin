@@ -37,6 +37,9 @@ export default async function PublicProfilePage({
             {memberSince && (
               <p className="text-xs text-muted-foreground">Membre depuis {memberSince}</p>
             )}
+            {profile.bio && (
+              <p className="mt-3 px-2 text-sm leading-relaxed text-foreground/80">{profile.bio}</p>
+            )}
           </div>
         </div>
       </div>

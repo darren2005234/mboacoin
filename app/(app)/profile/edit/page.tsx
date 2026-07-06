@@ -15,6 +15,7 @@ export default function EditProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [bio, setBio] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -26,6 +27,7 @@ export default function EditProfilePage() {
       setFullName(data.fullName);
       setCity(data.city);
       setEmail(data.email);
+      setBio(data.bio);
       setLoading(false);
     })();
   }, [router]);
@@ -37,7 +39,7 @@ export default function EditProfilePage() {
       return;
     }
     setSaving(true);
-    const result = await updateMyProfile({ fullName, city, email });
+    const result = await updateMyProfile({ fullName, city, email, bio });
     if (result.error) {
       setError(result.error);
       setSaving(false);
@@ -84,6 +86,20 @@ export default function EditProfilePage() {
           <p className="mt-1 text-xs text-muted-foreground">
             Une adresse secondaire pour être contacté ou retrouver votre compte.
           </p>
+          <div>
+            <label className="field-label">
+                Bio <span className="font-normal text-muted-foreground">(facultatif)</span>
+            </label>
+            <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={3}
+                maxLength={300}
+                placeholder="Présentez-vous en quelques mots..."
+                className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">{bio.length} / 300</p>
+          </div>
         </div>
 
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}

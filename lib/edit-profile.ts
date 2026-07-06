@@ -4,6 +4,8 @@ export interface EditableProfile {
   fullName: string;
   city: string;
   email: string;
+  bio: string;
+
 }
 
 /** Charge les infos modifiables du profil de l'utilisateur courant. */
@@ -16,7 +18,7 @@ export async function getMyProfileForEdit(): Promise<EditableProfile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("full_name, city, email")
+    .select("full_name, city, email, bio")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -26,6 +28,7 @@ export async function getMyProfileForEdit(): Promise<EditableProfile | null> {
     fullName: data.full_name ?? "",
     city: data.city ?? "",
     email: data.email ?? "",
+    bio: data.bio ?? "",
   };
 }
 
@@ -34,6 +37,7 @@ export async function updateMyProfile(input: {
   fullName: string;
   city: string;
   email: string;
+  bio: string;
 }): Promise<{ success?: boolean; error?: string }> {
   const supabase = createClient();
   const {
@@ -53,6 +57,7 @@ export async function updateMyProfile(input: {
       full_name: input.fullName.trim(),
       city: input.city.trim() || null,
       email: email || null,
+      bio: input.bio.trim() || null,
     })
     .eq("id", user.id);
 
