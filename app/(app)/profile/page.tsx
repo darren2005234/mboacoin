@@ -26,16 +26,31 @@ export default async function ProfilePage() {
           <p className="text-lg font-extrabold">{profile.fullName ?? "Sans nom"}</p>
           <p className="text-sm text-muted-foreground">{profile.phone}</p>
         </div>
-        <TrustSealBadge label="Non vérifié" tone="pending" />
+        {profile.verification === "verifie" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-seal-bg px-3 py-1 text-xs font-bold text-seal-text">
+            <Icon name="verified" size={14} /> Vérifié
+          </span>
+        ) : profile.verification === "en_attente" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-pending-bg px-3 py-1 text-xs font-bold text-pending-text">
+            <Icon name="hourglass_top" size={14} /> Vérification en cours
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">
+            <Icon name="gpp_maybe" size={14} /> Non vérifié
+          </span>
+        )}
       </div>
 
       <div className="space-y-2 px-5">
         <MenuRow icon="edit" label="Modifier mon profil" href="/profile/edit" />
-        <MenuRow icon="verified_user" label="Vérifier mon identité" />
+        <MenuRow icon="verified_user" label="Vérifier mon identité" href="/profile/verification" />
         <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
         <MenuRow icon="settings" label="Paramètres" />
         <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
         <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
+        {profile.role === "admin" && (
+          <MenuRow icon="admin_panel_settings" label="Administration — Vérifications" href="/admin/verifications" />
+        )}
       </div>
 
       <div className="p-5">
