@@ -14,6 +14,9 @@ import { Avatar } from "@/components/mboacoin/avatar";
 import { ReportDialog } from "@/components/mboacoin/report-dialog";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/mboacoin/icon";
+import { countFavoritesServer } from "@/lib/favorites-server";
+import { ListingActions } from "@/components/mboacoin/listing-actions";
+import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
 
 export default async function ListingDetailPage({
   params,
@@ -22,8 +25,11 @@ export default async function ListingDetailPage({
 }) {
   const { id } = await params;
   const listing = await getListingById(id);
-  const supabase = await createClient();
   if (!listing) notFound();
+  const favoritesCount = await countFavoritesServer(listing.id);
+  const favoriteIds = await getMyFavoriteIdsServer();
+  const isFavorited = favoriteIds.has(listing.id);
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -34,6 +40,12 @@ export default async function ListingDetailPage({
       <div className="relative shrink-0">
         <Gallery images={listing.images} alt={listing.title} />
         <BackButton />
+        <ListingActions
+          listingId={listing.id}
+          title={listing.title}
+          initialFavorited={isFavorited}
+          favoritesCount={favoritesCount}
+        />
       </div>
 
       <div className="flex-1 space-y-6 p-5">

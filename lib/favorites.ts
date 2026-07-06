@@ -100,3 +100,4 @@ export async function getMyFavorites(): Promise<Listing[]> {
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 }
+
