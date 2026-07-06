@@ -5,12 +5,14 @@ import { Wordmark } from "@/components/mboacoin/wordmark";
 import { Icon } from "@/components/mboacoin/icon";
 import { getPublishedListings } from "@/lib/listings";
 import { getCurrentProfile } from "@/lib/profile";
+import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
 
 const CATEGORIES = ["Studios", "Appartements", "Villas", "Chambres", "Meublés"];
 
 export default async function ExplorePage() {
   const listings = await getPublishedListings();
   const profile = await getCurrentProfile();
+  const favoriteIds = await getMyFavoriteIdsServer();
 
   return (
     <div className="flex flex-col">
@@ -89,7 +91,9 @@ export default async function ExplorePage() {
             <p className="text-sm text-muted-foreground">Les annonces publiées apparaîtront ici.</p>
           </div>
         ) : (
-          listings.map((l) => <ListingCard key={l.id} listing={l} />)
+          listings.map((l) => (
+            <ListingCard key={l.id} listing={l} initialFavorited={favoriteIds.has(l.id)} />
+          ))
         )}
       </div>
 

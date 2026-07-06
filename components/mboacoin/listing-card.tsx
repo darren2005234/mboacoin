@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Heart, MapPin, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Price } from "./price";
 import { TrustSeal } from "./trust-seal";
+import { toggleFavorite } from "@/lib/favorites";
 
 export interface Listing {
   id: string;
@@ -23,27 +25,45 @@ export interface Listing {
 interface ListingCardProps {
   listing: Listing;
   onOpen?: (id: string) => void;
-  onToggleFavorite?: (id: string) => void;
   className?: string;
+  initialFavorited?: boolean;
 }
 
 /** Carte d'annonce. Sceau doré si vérifiée, prix en Space Grotesk, navigation intégrée. */
-export function ListingCard({ listing, onOpen, onToggleFavorite, className }: ListingCardProps) {
+export function ListingCard({ listing, onOpen, className, initialFavorited }: ListingCardProps) {
   const router = useRouter();
-  const [fav, setFav] = React.useState(Boolean(listing.favorite));
+  const [fav, setFav] = useState(Boolean(initialFavorited));
+  const [pending, setPending] = useState(false);
 
-  const open = () => (onOpen ? onOpen(listing.id) : router.push(`/listings/${listing.id}`));
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFav((v) => !v);
-    onToggleFavorite?.(listing.id);
-  };
-  const onKey = (e: React.KeyboardEvent) => {
+  function open() {
+    if (onOpen) onOpen(listing.id);
+    else router.push(`/listings/${listing.id}`);
+  }
+
+  function onKey(e: React.KeyboardEvent) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       open();
     }
-  };
+  }
+
+  async function toggleFav(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (pending) return;
+    setPending(true);
+    const prev = fav;
+    setFav(!prev); // mise à jour optimiste (immédiate à l'écran)
+    const result = await toggleFavorite(listing.id);
+    if (result.error === "not-authenticated") {
+      setFav(prev);
+      router.push("/login");
+      return;
+    }
+    if (result.error) {
+      setFav(prev); // on annule en cas d'erreur
+    }
+    setPending(false);
+  }
 
   return (
     <article
@@ -56,7 +76,7 @@ export function ListingCard({ listing, onOpen, onToggleFavorite, className }: Li
         className
       )}
     >
-      <div className="relative h-36 bg-secondary">
+      <div className="relative h-44 bg-secondary">
         <Image
           src={listing.image}
           alt=""
@@ -73,7 +93,8 @@ export function ListingCard({ listing, onOpen, onToggleFavorite, className }: Li
           type="button"
           aria-label={fav ? "Retirer des favoris" : "Ajouter aux favoris"}
           aria-pressed={fav}
-          onClick={toggle}
+          onClick={toggleFav}
+          disabled={pending}
           className="absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-card/85 text-muted-foreground backdrop-blur transition-colors hover:text-fav"
         >
           <Heart className={cn("size-4", fav && "fill-fav text-fav")} />
@@ -81,14 +102,14 @@ export function ListingCard({ listing, onOpen, onToggleFavorite, className }: Li
       </div>
       <div className="space-y-1.5 p-3.5">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-1 text-sm font-bold">{listing.title}</h3>
+          <h3 className="line-clamp-1 text-base font-bold">{listing.title}</h3>
           <Price amount={listing.price} suffix={listing.priceSuffix} size="sm" />
         </div>
-        <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+        <p className="flex items-center gap-1 text-[13px] text-muted-foreground">
           <MapPin className="size-3" /> {listing.location}
         </p>
         {listing.bedrooms ? (
-          <p className="mt-2 flex items-center gap-1 border-t border-border pt-2 text-[11px] font-medium text-foreground/70">
+          <p className="mt-2 flex items-center gap-1 border-t border-border pt-2 text-[13px] font-medium text-foreground/70">
             <BedDouble className="size-3.5 text-accent" /> {listing.bedrooms} chambres
           </p>
         ) : null}

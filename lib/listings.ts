@@ -8,7 +8,7 @@ export async function getPublishedListings(): Promise<Listing[]> {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles(full_name, verification)"
+      "id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification)"
     )
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -39,7 +39,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles(full_name, verification, avatar_url), media:listing_media(storage_path, position)"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position)"
     )
     .eq("id", id)
     .eq("status", "publiee")
@@ -81,3 +81,4 @@ export async function getListingById(id: string) {
     ownerId: data.owner_id,
   };
 }
+
