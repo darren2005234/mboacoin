@@ -97,15 +97,7 @@ export default async function ExplorePage() {
         )}
       </div>
 
-      {/* Bouton flottant Publier (connecté uniquement) */}
-      {profile && (
-        <Link
-          href="/publish"
-          className="fixed bottom-24 right-5 z-10 flex items-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-soft lg:absolute"
-        >
-          <Icon name="add" size={20} /> Publier
-        </Link>
-      )}
+
     </div>
   );
 }

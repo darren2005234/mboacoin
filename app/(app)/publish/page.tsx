@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { createListing } from "@/lib/create-listing";
+import imageCompression from "browser-image-compression";
 
 const TYPES = ["Studio", "Appartement", "Villa", "Chambre"];
 
@@ -47,6 +48,7 @@ export default function PublishPage() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
 
   // Restauration : true = brouillon détecté, on propose de reprendre
   const [draftFound, setDraftFound] = useState(false);
@@ -139,9 +141,33 @@ function restoreDraft() {
     }
   }
 
-  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []).slice(0, 6);
-    setFiles(picked);
+    if (picked.length === 0) return;
+
+    setCompressing(true);
+    setError(null);
+    try {
+      const options = {
+        maxSizeMB: 1, // cible : 1 Mo max par photo
+        maxWidthOrHeight: 1600, // dimension max : 1600px
+        useWebWorker: true, // compression en arrière-plan, sans bloquer l'écran
+      };
+      const compressed = await Promise.all(
+        picked.map(async (file) => {
+          // On ne compresse que les images (sécurité)
+          if (!file.type.startsWith("image/")) return file;
+          try {
+            return await imageCompression(file, options);
+          } catch {
+            return file; // si la compression échoue, on garde l'originale
+          }
+        })
+      );
+      setFiles(compressed);
+    } finally {
+      setCompressing(false);
+    }
   }
 
   function toggleAmenity(a: string) {
@@ -246,7 +272,11 @@ function restoreDraft() {
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-secondary/50 py-8 text-center">
             <Icon name="add_a_photo" size={28} className="text-muted-foreground" filled={false} />
             <span className="text-sm font-medium text-muted-foreground">
-              {files.length > 0 ? `${files.length} photo(s) sélectionnée(s)` : "Ajouter des photos"}
+              {compressing
+                ? "Optimisation des photos..."
+                : files.length > 0
+                ? `${files.length} photo(s) prête(s)`
+                : "Ajouter des photos"}
             </span>
             <input
               type="file"
@@ -543,8 +573,8 @@ function restoreDraft() {
 
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
-        <Button type="submit" size="lg" className="w-full" disabled={loading}>
-          {loading ? "Publication en cours..." : "Publier l'annonce"}
+        <Button type="submit" size="lg" className="w-full" disabled={loading || compressing}>
+          {loading ? "Publication en cours..." : compressing ? "Optimisation..." : "Publier l'annonce"}
         </Button>
       </form>
     </div>

@@ -34,15 +34,22 @@ export function ShareButton({ title, className }: ShareButtonProps) {
   }
 
   return (
-    <button
-      onClick={share}
-      aria-label="Partager"
-      className={
-        className ??
-        "grid size-10 place-items-center rounded-full bg-card/85 text-foreground backdrop-blur"
-      }
-    >
-      <Icon name={copied ? "check" : "share"} size={20} />
-    </button>
+    <div className="relative">
+      <button
+        onClick={share}
+        aria-label="Partager"
+        className={
+          className ??
+          "grid size-10 place-items-center rounded-full bg-card/85 text-foreground backdrop-blur"
+        }
+      >
+        <Icon name={copied ? "check" : "share"} size={20} />
+      </button>
+      {copied && (
+        <span className="absolute -bottom-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1 text-xs font-semibold text-white shadow-soft">
+          Lien copié !
+        </span>
+      )}
+    </div>
   );
 }

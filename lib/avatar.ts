@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import imageCompression from "browser-image-compression";
 
 /** Téléverse une nouvelle photo de profil et met à jour le profil. Retourne l'URL. */
 export async function uploadAvatar(file: File): Promise<{ url?: string; error?: string }> {
@@ -8,13 +9,26 @@ export async function uploadAvatar(file: File): Promise<{ url?: string; error?: 
   } = await supabase.auth.getUser();
   if (!user) return { error: "Vous devez être connecté." };
 
-  const ext = file.name.split(".").pop() ?? "jpg";
-  // Un chemin fixe par utilisateur, écrasé à chaque changement
-  const path = `${user.id}/avatar.${ext}`;
+  // Compression : un avatar s'affiche petit, on peut réduire fortement
+  let toUpload: File = file;
+  if (file.type.startsWith("image/")) {
+    try {
+      toUpload = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      });
+    } catch {
+      toUpload = file; // si la compression échoue, on garde l'originale
+    }
+  }
+
+  // On force l'extension jpg car la compression convertit généralement en jpeg
+  const path = `${user.id}/avatar.jpg`;
 
   const { error: upErr } = await supabase.storage
     .from("avatars")
-    .upload(path, file, { upsert: true });
+    .upload(path, toUpload, { upsert: true });
   if (upErr) return { error: `Upload : ${upErr.message}` };
 
   // URL publique, avec un paramètre anti-cache pour forcer le rafraîchissement

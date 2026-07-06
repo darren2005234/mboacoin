@@ -37,7 +37,14 @@ export function Avatar({ name, src, size = 44, className }: AvatarProps) {
         className={cn("relative shrink-0 overflow-hidden rounded-full bg-secondary", className)}
         style={{ width: size, height: size }}
       >
-        <Image src={src} alt={name} fill className="object-cover" sizes={`${size}px`} />
+        <Image
+          src={src}
+          alt={name}
+          fill
+          className="object-cover"
+          sizes={`${size * 3}px`}
+          quality={90}
+        />
       </div>
     );
   }
