@@ -49,33 +49,59 @@ export default function PublishPage() {
     setError(null);
     const form = new FormData(e.currentTarget);
 
+    const titleV = String(form.get("title")).trim();
+    const cityV = String(form.get("city")).trim();
+    const neighborhoodV = String(form.get("neighborhood")).trim();
+    const priceV = Number(form.get("price"));
+
+    // Validation des champs obligatoires
     if (files.length === 0) {
       setError("Ajoutez au moins une photo.");
+      return;
+    }
+    if (!titleV) {
+      setError("Le titre est obligatoire.");
+      return;
+    }
+    if (!cityV) {
+      setError("La ville est obligatoire.");
+      return;
+    }
+    if (!neighborhoodV) {
+      setError("Le quartier est obligatoire.");
+      return;
+    }
+    if (!priceV || priceV <= 0) {
+      setError("Indiquez un prix valide.");
+      return;
+    }
+    if (description.trim().length < 20) {
+      setError("La description doit faire au moins 20 caractères.");
       return;
     }
 
     setLoading(true);
     const result = await createListing({
-      title: String(form.get("title")),
+      title: titleV,
       propertyType: type,
-      city: String(form.get("city")),
-      neighborhood: String(form.get("neighborhood")),
-      price: Number(form.get("price")),
+      city: cityV,
+      neighborhood: neighborhoodV,
+      addressDescription: String(form.get("address")) || null,
+      price: priceV,
       bedrooms: Number(form.get("bedrooms")) || 0,
       bathrooms: Number(form.get("bathrooms")) || 0,
+      rooms: Number(rooms) || null,
+      area: Number(area) || null,
       advanceMonths: Number(form.get("advance")) || 1,
       depositMonths: Number(form.get("deposit")) || 1,
       furnishing,
       water: String(form.get("water")) || null,
       electricity: String(form.get("electricity")) || null,
       amenities,
-      description: description,
-      rooms: Number(rooms) || null,
       availableFrom: availableNow ? null : availableFrom || null,
-      area: Number(area) || null,
-      addressDescription: String(form.get("address")) || null,
+      description: description,
       files,
-    }); 
+    });
 
     if (result.error) {
       setError(result.error);
@@ -88,11 +114,13 @@ export default function PublishPage() {
   return (
     <div className="flex flex-col pb-8">
       <ScreenHeader title="Publier une annonce" subtitle="Décrivez votre bien pour le mettre en ligne." />
-
+      <p className="px-5 pb-1 text-xs text-muted-foreground">
+        Les champs marqués d&apos;un <span className="text-destructive">*</span> sont obligatoires.
+      </p>
       <form onSubmit={submit} className="space-y-6 px-5">
         {/* Photos */}
         <div>
-          <label className="field-label">Photos (max 6)</label>
+          <label className="field-label">Photos (max 6)<span className="text-destructive"> *</span></label>
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-secondary/50 py-8 text-center">
             <Icon name="add_a_photo" size={28} className="text-muted-foreground" filled={false} />
             <span className="text-sm font-medium text-muted-foreground">
@@ -129,11 +157,11 @@ export default function PublishPage() {
           </div>
         </div>
 
-        <Field name="title" label="Titre" placeholder="Ex : Appartement standing" required />
+        <Field name="title" label="Titre" placeholder="Ex : Appartement standing" required/>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field name="city" label="Ville" placeholder="Douala" required />
-          <Field name="neighborhood" label="Quartier" placeholder="Akwa" required />
+          <Field name="city" label="Ville" placeholder="Douala" required/>
+          <Field name="neighborhood" label="Quartier" placeholder="Akwa" required/>
         </div>
         <div>
           <label htmlFor="address" className="field-label">
@@ -148,7 +176,7 @@ export default function PublishPage() {
           />
         </div>
 
-        <Field name="price" label="Loyer mensuel (FCFA)" type="number" placeholder="150000" required />
+        <Field name="price" label="Loyer mensuel (FCFA)" type="number" placeholder="150000" required/>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
@@ -256,7 +284,7 @@ export default function PublishPage() {
         {/* Description */}
         <div>
           <div className="flex items-center justify-between">
-            <label htmlFor="description" className="field-label">Description</label>
+            <label htmlFor="description" className="field-label">Description<span className="text-destructive"> *</span></label>
             <span
               className={
                 description.length >= 1500
@@ -324,13 +352,15 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="field-label">{label}</label>
+      <label htmlFor={name} className="field-label">
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </label>
       <input
         id={name}
         name={name}
         type={type}
         placeholder={placeholder}
-        required={required}
         className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
       />
     </div>
