@@ -54,6 +54,9 @@ export default function EditListingPage({
   const [availableNow, setAvailableNow] = useState(true);
   const [availableFrom, setAvailableFrom] = useState("");
   const [addressDescription, setAddressDescription] = useState("");
+  const [floorNumber, setFloorNumber] = useState("");
+  const [carAccess, setCarAccess] = useState(false);
+  const [floodZone, setFloodZone] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -82,6 +85,9 @@ export default function EditListingPage({
       setElectricity(data.electricity ?? "");
       setAmenities(data.amenities);
       setDescription(data.description ?? "");
+      setFloorNumber(data.floorNumber != null ? String(data.floorNumber) : "");
+      setCarAccess(data.carAccess);
+      setFloodZone(data.floodZone);
       setLoading(false);
     })();
   }, [id]);
@@ -113,6 +119,9 @@ export default function EditListingPage({
       area: Number(area) || null,
       availableFrom: availableNow ? null : availableFrom || null,
       addressDescription: addressDescription.trim() || null,
+      floorNumber: floorNumber.trim() === "" ? null : Number(floorNumber),
+      carAccess: carAccess,
+      floodZone: floodZone,
     });
 
     if (result.error) {
@@ -215,7 +224,7 @@ export default function EditListingPage({
             <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} />
           </div>
         </div>
-                  <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="field-label">Pièces</label>
             <input type="number" value={rooms} onChange={(e) => setRooms(e.target.value)} className={inputCls} />
@@ -224,7 +233,20 @@ export default function EditListingPage({
             <label className="field-label">Superficie (m²)</label>
             <input type="number" value={area} onChange={(e) => setArea(e.target.value)} className={inputCls} />
           </div>
+
         </div>
+          <div>
+            <label className="field-label">
+              Étage <span className="font-normal text-muted-foreground">(optionnel, 0 = rez-de-chaussée)</span>
+            </label>
+            <input
+              type="number"
+              value={floorNumber}
+              onChange={(e) => setFloorNumber(e.target.value)}
+              placeholder="Ex : 2"
+              className={inputCls}
+            />
+          </div>
 
         <div>
           <label className="field-label">Disponibilité</label>
@@ -321,7 +343,26 @@ export default function EditListingPage({
             />
           </label>
         </div>
-
+        <div className="space-y-2">
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+            <input
+              type="checkbox"
+              checked={carAccess}
+              onChange={(e) => setCarAccess(e.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span className="text-sm font-medium">Accès voiture jusqu&apos;au logement</span>
+          </label>
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+            <input
+              type="checkbox"
+              checked={floodZone}
+              onChange={(e) => setFloodZone(e.target.checked)}
+              className="size-4 accent-destructive"
+            />
+            <span className="text-sm font-medium">Situé en zone inondable</span>
+          </label>
+        </div>    
         <div>
           <div className="flex items-center justify-between">
             <label className="field-label">Description</label>

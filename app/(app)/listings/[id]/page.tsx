@@ -38,6 +38,7 @@ export default async function ListingDetailPage({
   const isFavorited = favoriteIds.has(listing.id);
   if (!listing.available) {
     if (isOwner) {
+  
       return (
         <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-20 text-center">
           <div className="grid size-16 place-items-center rounded-full bg-pending-bg">
@@ -166,7 +167,32 @@ export default async function ListingDetailPage({
             electricity: listing.electricity,
             amenities: listing.amenities,
           }}
+          
         />
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          {listing.floorNumber != null && (
+            <span className="flex items-center gap-1.5">
+              <Icon name="stairs" size={18} className="text-accent" />
+              {listing.floorNumber === 0 ? "Rez-de-chaussée" : `${listing.floorNumber}e étage`}
+            </span>
+          )}
+          {listing.carAccess && (
+            <span className="flex items-center gap-1.5">
+              <Icon name="directions_car" size={18} className="text-accent" /> Accès voiture
+            </span>
+          )}
+        </div>
+        {listing.floodZone && (
+          <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+            <Icon name="warning" size={20} className="mt-0.5 shrink-0 text-destructive" />
+            <div>
+              <p className="text-sm font-bold text-destructive">Zone inondable</p>
+              <p className="text-xs text-muted-foreground">
+                Ce logement est situé en zone inondable selon le bailleur. Renseignez-vous sur les précautions en saison des pluies.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Description : affichée seulement si renseignée */}
         {listing.description && (
           <div className="space-y-2">

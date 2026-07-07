@@ -19,6 +19,9 @@ export interface EditableListing {
   area: number | null;
   availableFrom: string | null;
   addressDescription: string | null;
+  floorNumber: number | null;
+  carAccess: boolean;
+  floodZone: boolean;
 }
 
 /** Charge une annonce pour l'édition (seulement si on en est le propriétaire). */
@@ -34,7 +37,7 @@ export async function getListingForEdit(
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description"
+      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone"
     )
     .eq("id", listingId)
     .maybeSingle();
@@ -61,6 +64,9 @@ export async function getListingForEdit(
     area: data.area,
     availableFrom: data.available_from,
     addressDescription: data.address_description,
+    floorNumber: data.floor_number ?? null,
+    carAccess: data.car_access ?? false,
+    floodZone: data.flood_zone ?? false,
   };
 }
 
@@ -84,6 +90,9 @@ export interface UpdateListingInput {
   area: number | null;
   availableFrom: string | null;
   addressDescription: string | null;
+  floorNumber: number | null;
+  carAccess: boolean;
+  floodZone: boolean;
 }
 
 /** Met à jour une annonce et ajoute d'éventuelles nouvelles photos. */
@@ -118,7 +127,10 @@ export async function updateListing(
       rooms: input.rooms,
       area: input.area,
       available_from: input.availableFrom,
-      address_description: input.addressDescription
+      address_description: input.addressDescription,
+      floor_number: input.floorNumber,
+      car_access: input.carAccess,
+      flood_zone: input.floodZone,
     })
     .eq("id", listingId);
 

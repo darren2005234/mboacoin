@@ -50,6 +50,9 @@ export default function PublishPage() {
   const [error, setError] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
   const [wantVerification, setWantVerification] = useState(false);
+  const [floorNumber, setFloorNumber] = useState("");
+  const [carAccess, setCarAccess] = useState(false);
+  const [floodZone, setFloodZone] = useState(false);
 
   // Restauration : true = brouillon détecté, on propose de reprendre
   const [draftFound, setDraftFound] = useState(false);
@@ -80,7 +83,7 @@ export default function PublishPage() {
     const data = {
       type, title, city, neighborhood, address, price, bedrooms, bathrooms,
       rooms, area, advance, deposit, furnishing, water, electricity,
-      amenities, availableNow, availableFrom, description,
+      amenities, availableNow, availableFrom, description, floorNumber, carAccess, floodZone,
     };
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
@@ -117,6 +120,9 @@ function restoreDraft() {
       setAvailableNow(d.availableNow ?? true);
       setAvailableFrom(d.availableFrom ?? "");
       setDescription(d.description ?? "");
+      setFloorNumber(d.floorNumber ?? "");
+      setCarAccess(d.carAccess ?? false);
+      setFloodZone(d.floodZone ?? false);
     } catch {
       // ignore
     }
@@ -230,6 +236,9 @@ function restoreDraft() {
       amenities,
       availableFrom: availableNow ? null : availableFrom || null,
       description: description,
+      floorNumber: floorNumber.trim() === "" ? null : Number(floorNumber),
+      carAccess: carAccess,
+      floodZone: floodZone,
       files,
     });
 
@@ -432,6 +441,19 @@ function restoreDraft() {
             className={inputCls}
           />
         </div>
+        <div>
+          <label htmlFor="floor" className="field-label">
+            Étage <span className="font-normal text-muted-foreground">(optionnel, 0 = rez-de-chaussée)</span>
+          </label>
+          <input
+            id="floor"
+            type="number"
+            value={floorNumber}
+            onChange={(e) => setFloorNumber(e.target.value)}
+            placeholder="Ex : 2"
+            className={inputCls}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -527,6 +549,26 @@ function restoreDraft() {
               );
             })}
           </div>
+        </div>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+            <input
+              type="checkbox"
+              checked={carAccess}
+              onChange={(e) => setCarAccess(e.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span className="text-sm font-medium">Accès voiture jusqu&apos;au logement</span>
+          </label>
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+            <input
+              type="checkbox"
+              checked={floodZone}
+              onChange={(e) => setFloodZone(e.target.checked)}
+              className="size-4 accent-destructive"
+            />
+            <span className="text-sm font-medium">Situé en zone inondable</span>
+          </label>
         </div>
 
         {/* Description */}

@@ -43,7 +43,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone"
     )
     .eq("id", id)
     .maybeSingle();
@@ -85,6 +85,9 @@ export async function getListingById(id: string) {
     available: data.status === "publiee",
     addressDescription: (data.address_description as string | null) ?? null,
     propertyVerified: data.property_verified ?? false,
+    floorNumber: data.floor_number ?? null,
+    carAccess: data.car_access ?? false,
+    floodZone: data.flood_zone ?? false,
   };
 }
 

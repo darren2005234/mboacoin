@@ -20,6 +20,9 @@ export interface NewListingInput {
   area: number | null;
   availableFrom: string | null;
   addressDescription: string | null;
+  floorNumber: number | null;
+  carAccess: boolean;
+  floodZone: boolean;
 }
 
 export interface CreateListingResult {
@@ -77,6 +80,9 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       area: input.area,
       available_from: input.availableFrom,
       address_description: input.addressDescription,
+      floor_number: input.floorNumber,
+      car_access: input.carAccess,
+      flood_zone: input.floodZone,
       
     })
     .select("id")
