@@ -26,7 +26,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
 
   const { data: listingsData } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, bedrooms, image_url")
+    .select("id, title, city, neighborhood, price, bedrooms, image_url, property_verified")
     .eq("owner_id", userId)
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -41,7 +41,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
     priceSuffix: "/ mois",
     image: row.image_url ?? "/img/listings/demo-1.jpg",
     bedrooms: row.bedrooms ?? undefined,
-    verified,
+    verified: row.property_verified ?? false,
   }));
 
   return {

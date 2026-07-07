@@ -49,6 +49,7 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
+  const [wantVerification, setWantVerification] = useState(false);
 
   // Restauration : true = brouillon détecté, on propose de reprendre
   const [draftFound, setDraftFound] = useState(false);
@@ -142,7 +143,7 @@ function restoreDraft() {
   }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const picked = Array.from(e.target.files ?? []).slice(0, 6);
+    const picked = Array.from(e.target.files ?? []).slice(0, 20);
     if (picked.length === 0) return;
 
     setCompressing(true);
@@ -238,7 +239,11 @@ function restoreDraft() {
       return;
     }
     clearDraft(); // publication réussie : on efface le brouillon
-    router.push(`/listings/${result.id}`);
+    if (wantVerification) {
+      router.push(`/listings/${result.id}/verify`);
+    } else {
+      router.push(`/listings/${result.id}`);
+    }
   }
 
   const inputCls =
@@ -268,7 +273,7 @@ function restoreDraft() {
       <form onSubmit={submit} className="space-y-6 px-5">
         {/* Photos */}
         <div>
-          <label className="field-label">Photos (max 6)<span className="text-destructive"> *</span></label>
+          <label className="field-label">Photos (max 20)<span className="text-destructive"> *</span></label>
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-secondary/50 py-8 text-center">
             <Icon name="add_a_photo" size={28} className="text-muted-foreground" filled={false} />
             <span className="text-sm font-medium text-muted-foreground">
@@ -569,6 +574,24 @@ function restoreDraft() {
               className="mt-2 w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
             />
           )}
+          <div className="rounded-2xl border border-seal/30 bg-seal-bg/40 p-4">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={wantVerification}
+              onChange={(e) => setWantVerification(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-primary"
+            />
+            <span>
+              <span className="flex items-center gap-1.5 text-sm font-bold text-seal-text">
+                <Icon name="verified" size={18} /> Faire vérifier mon logement
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Obtenez le badge de confiance « Logement vérifié » en filmant votre bien. Après publication, nous vous guiderons pour envoyer une courte vidéo. C&apos;est ce badge qui rassure le plus les locataires.
+              </span>
+            </span>
+          </label>
+        </div>
         </div>
 
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}

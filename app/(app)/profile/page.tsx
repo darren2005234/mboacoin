@@ -51,6 +51,9 @@ export default async function ProfilePage() {
         {profile.role === "admin" && (
           <MenuRow icon="admin_panel_settings" label="Administration — Vérifications" href="/admin/verifications" />
         )}
+        {profile.role === "admin" && (
+          <MenuRow icon="video_library" label="Administration — Vidéos logement" href="/admin/listing-verifications" />
+        )}
       </div>
 
       <div className="p-5">

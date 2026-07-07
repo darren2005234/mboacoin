@@ -88,11 +88,17 @@ export default async function ListingDetailPage({
           initialFavorited={isFavorited}
           favoritesCount={favoritesCount}
         />
+
       </div>
 
       <div className="flex-1 space-y-6 p-5">
         <div className="space-y-1">
           <h1 className="text-xl font-extrabold leading-tight">{listing.title}</h1>
+          {listing.propertyVerified && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-seal-bg px-3 py-1 text-xs font-bold text-seal-text">
+              <TrustSeal size={14} /> Logement vérifié
+            </span>
+        )}
           <p className="text-sm font-medium text-muted-foreground">{listing.location}</p>
           {listing.addressDescription && (
           <div className="flex items-start gap-2 text-sm text-foreground/80">

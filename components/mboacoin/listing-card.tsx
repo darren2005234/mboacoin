@@ -24,6 +24,7 @@ export interface Listing {
   bathrooms?: number;
   rooms?: number;
   area?: number;
+  propertyVerified?: boolean;
 }
 
 interface ListingCardProps {

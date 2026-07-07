@@ -3,6 +3,7 @@ import type { Listing } from "@/components/mboacoin/listing-card";
 
 export interface MyListing extends Listing {
   status: string;
+  propertyVerified: boolean;
 }
 
 /** Récupère les annonces de l'utilisateur connecté, tous statuts confondus. */
@@ -15,7 +16,7 @@ export async function getMyListings(): Promise<MyListing[]> {
 
   const { data, error } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, bedrooms, image_url, status")
+    .select("id, title, city, neighborhood, price, bedrooms, image_url, status, property_verified")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -31,6 +32,7 @@ export async function getMyListings(): Promise<MyListing[]> {
     bedrooms: row.bedrooms ?? undefined,
     verified: false,
     status: row.status,
+    propertyVerified: row.property_verified ?? false,
   }));
 }
 

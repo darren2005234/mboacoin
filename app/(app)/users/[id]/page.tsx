@@ -5,6 +5,7 @@ import { ListingCard } from "@/components/mboacoin/listing-card";
 import { TrustSeal } from "@/components/mboacoin/trust-seal";
 import { BackButton } from "@/components/mboacoin/back-button";
 import { ViewableAvatar } from "@/components/mboacoin/viewable-avatar";
+import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
 
 export default async function PublicProfilePage({
   params,
@@ -14,6 +15,7 @@ export default async function PublicProfilePage({
   const { id } = await params;
   const profile = await getPublicProfile(id);
   if (!profile) notFound();
+  const favoriteIds = await getMyFavoriteIdsServer();
 
   const memberSince = profile.memberSince
     ? new Date(profile.memberSince).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
@@ -55,7 +57,7 @@ export default async function PublicProfilePage({
         ) : (
           <div className="space-y-3">
             {profile.listings.map((l) => (
-              <ListingCard key={l.id} listing={l} />
+              <ListingCard key={l.id} listing={l} initialFavorited={favoriteIds.has(l.id)} />
             ))}
           </div>
         )}

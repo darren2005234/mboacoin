@@ -47,7 +47,7 @@ export function Gallery({ images, alt = "" }: GalleryProps) {
           </div>
         )}
 
-        <span className="absolute right-3 top-3 rounded-lg bg-foreground/60 px-2 py-1 text-[11px] font-medium text-white">
+        <span className="absolute bottom-3 right-3 rounded-full bg-foreground/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
           {index + 1} / {images.length}
         </span>
       </div>

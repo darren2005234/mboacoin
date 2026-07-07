@@ -104,6 +104,18 @@ export default function MyListingsPage() {
                   <Icon name="delete" size={16} filled={false} /> Supprimer
                 </button>
               </div>
+              {l.propertyVerified ? (
+                <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-seal-bg py-2 text-xs font-bold text-seal-text">
+                  <Icon name="verified" size={16} /> Logement vérifié
+                </div>
+              ) : (
+                <button
+                  onClick={() => router.push(`/listings/${l.id}/verify`)}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-accent/30 bg-accent/5 py-2 text-xs font-bold text-accent"
+                >
+                  <Icon name="verified_user" size={16} filled={false} /> Faire vérifier ce logement
+                </button>
+              )}
             </div>
           ))}
         </div>
