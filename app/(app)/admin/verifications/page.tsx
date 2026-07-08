@@ -68,6 +68,9 @@ export default function AdminVerificationsPage() {
           {items.map((item) => (
             <div key={item.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
               <div className="relative h-56 bg-secondary">
+                <span className="absolute left-2 top-2 z-10 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                  Document
+                </span>
                 {!item.documentUrl ? (
                   <div className="grid h-full place-items-center text-sm text-muted-foreground">
                     Document indisponible
@@ -87,6 +90,20 @@ export default function AdminVerificationsPage() {
                   <Image src={item.documentUrl} alt="Document" fill className="object-contain" sizes="400px" unoptimized />
                 )}
               </div>
+              {/* Selfie en direct, pour comparer les visages */}
+              {item.selfieUrl && (
+                <div className="border-t border-border">
+                  <div className="relative h-56 bg-secondary">
+                    <Image src={item.selfieUrl} alt="Photo en direct" fill className="object-contain" sizes="400px" unoptimized />
+                    <span className="absolute left-2 top-2 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                      Photo en direct
+                    </span>
+                  </div>
+                  <p className="bg-pending-bg px-3 py-2 text-xs text-pending-text">
+                    Vérifiez que le visage de la photo en direct correspond bien à celui du document.
+                  </p>
+                </div>
+              )}
               <div className="space-y-3 p-4">
                 <div>
                   <p className="text-sm font-bold">{item.userName}</p>

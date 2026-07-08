@@ -28,10 +28,11 @@ export async function getMyVerificationStatus(): Promise<VerificationStatus> {
   };
 }
 
-/** Soumet un document d'identité pour vérification. */
+/** Soumet un document d'identité + un selfie pris en direct pour vérification. */
 export async function submitVerification(
   file: File,
-  documentType: string
+  documentType: string,
+  selfie: File
 ): Promise<{ success?: boolean; error?: string }> {
   const supabase = createClient();
   const {
@@ -39,23 +40,29 @@ export async function submitVerification(
   } = await supabase.auth.getUser();
   if (!user) return { error: "not-authenticated" };
 
-  // Chemin dans le dossier de l'utilisateur (exigé par la règle de sécurité)
+  // Document d'identité
   const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${user.id}/${Date.now()}.${ext}`;
-
+  const docPath = `${user.id}/${Date.now()}-doc.${ext}`;
   const { error: upErr } = await supabase.storage
     .from("identity-documents")
-    .upload(path, file, { upsert: false });
+    .upload(docPath, file, { upsert: false });
   if (upErr) return { error: `Envoi du document : ${upErr.message}` };
+
+  // Selfie pris en direct
+  const selfiePath = `${user.id}/${Date.now()}-selfie.jpg`;
+  const { error: selfieErr } = await supabase.storage
+    .from("identity-documents")
+    .upload(selfiePath, selfie, { upsert: false });
+  if (selfieErr) return { error: `Envoi du selfie : ${selfieErr.message}` };
 
   const { error } = await supabase.from("verification_requests").insert({
     user_id: user.id,
-    document_path: path,
+    document_path: docPath,
     document_type: documentType,
+    selfie_path: selfiePath,
   });
   if (error) return { error: error.message };
 
-  // On met le profil en "en attente" pour refléter l'état
   await supabase
     .from("profiles")
     .update({ verification: "en_attente" })

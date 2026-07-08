@@ -6,6 +6,7 @@ export interface PendingVerification {
   userName: string;
   documentType: string | null;
   documentUrl: string;
+  selfieUrl: string;
   isPdf: boolean;
   createdAt: string;
 }
@@ -16,7 +17,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
 
   const { data, error } = await supabase
     .from("verification_requests")
-    .select("id, user_id, document_path, document_type, created_at, profiles(full_name)")
+    .select("id, user_id, document_path, selfie_path, document_type, created_at, profiles(full_name)")
     .eq("status", "en_attente")
     .order("created_at", { ascending: true });
 
@@ -25,10 +26,19 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
   const results: PendingVerification[] = [];
   for (const row of data) {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    // URL signée temporaire pour voir le document privé (valable 1h)
+    // URL signée du document (1h)
     const { data: signed } = await supabase.storage
       .from("identity-documents")
       .createSignedUrl(row.document_path, 3600);
+
+    // URL signée du selfie (1h), si présent
+    let selfieUrl = "";
+    if (row.selfie_path) {
+      const { data: signedSelfie } = await supabase.storage
+        .from("identity-documents")
+        .createSignedUrl(row.selfie_path, 3600);
+      selfieUrl = signedSelfie?.signedUrl ?? "";
+    }
 
     results.push({
       id: row.id,
@@ -36,6 +46,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
       userName: profile?.full_name ?? "Utilisateur",
       documentType: row.document_type,
       documentUrl: signed?.signedUrl ?? "",
+      selfieUrl,
       isPdf: row.document_path.toLowerCase().endsWith(".pdf"),
       createdAt: row.created_at,
     });

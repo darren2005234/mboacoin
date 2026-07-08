@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { getMyVerificationStatus, submitVerification } from "@/lib/verification";
+import { CameraCapture } from "@/components/mboacoin/camera-capture";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -18,6 +19,9 @@ export default function VerificationPage() {
   const [loading, setLoading] = useState(true);
   const [docType, setDocType] = useState(DOC_TYPES[0]);
   const [file, setFile] = useState<File | null>(null);
+  const [selfie, setSelfie] = useState<File | null>(null);
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -32,14 +36,26 @@ export default function VerificationPage() {
     })();
   }, []);
 
+  function onSelfieCaptured(f: File) {
+    setSelfie(f);
+    // Aperçu du selfie
+    if (selfieUrl) URL.revokeObjectURL(selfieUrl);
+    setSelfieUrl(URL.createObjectURL(f));
+    setCameraOpen(false);
+  }
+
   async function submit() {
     setError(null);
     if (!file) {
       setError("Choisissez une photo de votre pièce d'identité.");
       return;
     }
+    if (!selfie) {
+      setError("Prenez votre photo en direct.");
+      return;
+    }
     setSubmitting(true);
-    const result = await submitVerification(file, docType);
+    const result = await submitVerification(file, docType, selfie);
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
@@ -53,12 +69,11 @@ export default function VerificationPage() {
     return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
   }
 
-  // États "en attente" ou "validée" : pas de nouveau formulaire
   if (done || status === "en_attente") {
     return (
       <div className="flex flex-col">
         <Link href="/profile" aria-label="Retour" className="absolute left-4 top-4 z-10 text-muted-foreground">
-            <ArrowLeft className="size-5" />
+          <ArrowLeft className="size-5" />
         </Link>
         <ScreenHeader title="Vérification d'identité" />
         <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -67,7 +82,7 @@ export default function VerificationPage() {
           </span>
           <h2 className="text-base font-bold">Demande en cours d&apos;examen</h2>
           <p className="text-sm text-muted-foreground">
-            Votre document a bien été reçu. Notre équipe l&apos;examine, vous serez notifié du résultat.
+            Votre document et votre photo ont bien été reçus. Notre équipe les examine, vous serez notifié du résultat.
           </p>
           <Button variant="outline" size="lg" className="mt-2" onClick={() => router.push("/profile")}>
             Retour au profil
@@ -81,7 +96,7 @@ export default function VerificationPage() {
     return (
       <div className="flex flex-col">
         <Link href="/profile" aria-label="Retour" className="absolute left-4 top-4 z-10 text-muted-foreground">
-            <ArrowLeft className="size-5" />
+          <ArrowLeft className="size-5" />
         </Link>
         <ScreenHeader title="Vérification d'identité" />
         <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -100,12 +115,11 @@ export default function VerificationPage() {
     );
   }
 
-  // États "aucune" ou "rejetee" : on affiche le formulaire
   return (
     <div className="flex flex-col pb-8">
       <Link href="/profile" aria-label="Retour" className="absolute left-4 top-4 z-10 text-muted-foreground">
         <ArrowLeft className="size-5" />
-      </Link>  
+      </Link>
       <ScreenHeader title="Vérification d'identité" subtitle="Faites vérifier votre identité pour gagner la confiance des utilisateurs." />
 
       <div className="space-y-5 px-5">
@@ -113,7 +127,7 @@ export default function VerificationPage() {
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
             <p className="text-sm font-bold text-destructive">Demande précédente rejetée</p>
             {rejectionReason && <p className="mt-0.5 text-xs text-muted-foreground">Motif : {rejectionReason}</p>}
-            <p className="mt-1 text-xs text-muted-foreground">Vous pouvez soumettre un nouveau document.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Vous pouvez soumettre une nouvelle demande.</p>
           </div>
         )}
 
@@ -122,7 +136,7 @@ export default function VerificationPage() {
             <Icon name="lock" size={18} className="text-accent" /> Confidentialité
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Votre document est stocké de manière sécurisée, à accès restreint, et n&apos;est utilisé que pour vérifier votre identité. Il n&apos;est jamais rendu public.
+            Votre document et votre photo sont stockés de manière sécurisée, à accès restreint, et ne servent qu&apos;à vérifier votre identité. Ils ne sont jamais rendus publics.
           </p>
         </div>
 
@@ -159,12 +173,46 @@ export default function VerificationPage() {
           />
         </div>
 
+        {/* Selfie en direct */}
+        <div>
+          <label className="field-label">Votre photo (prise en direct)</label>
+          {selfie && selfieUrl ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-secondary/50 p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={selfieUrl} alt="Votre photo" className="size-16 rounded-xl object-cover" />
+              <div className="flex-1">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-ok-text">
+                  <Icon name="check_circle" size={16} /> Photo prise
+                </p>
+                <button onClick={() => setCameraOpen(true)} className="mt-0.5 text-xs font-semibold text-primary">
+                  Reprendre la photo
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setCameraOpen(true)}
+              className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-secondary/50 py-8 text-center"
+            >
+              <Icon name="photo_camera" size={26} className="text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Prendre ma photo en direct</span>
+            </button>
+          )}
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Cette photo, prise sur le moment, permet de confirmer que vous êtes bien la personne du document.
+          </p>
+        </div>
+
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
         <Button size="lg" className="w-full" onClick={submit} disabled={submitting}>
           {submitting ? "Envoi..." : "Soumettre pour vérification"}
         </Button>
       </div>
+
+      {cameraOpen && (
+        <CameraCapture onCapture={onSelfieCaptured} onCancel={() => setCameraOpen(false)} />
+      )}
     </div>
   );
 }
