@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
 
+
 export interface SearchCriteria {
   keywords?: string;
   city?: string;
@@ -13,6 +14,9 @@ export interface SearchCriteria {
   furnishing?: string;
   carAccess?: boolean;
   sort?: "recent" | "price_asc" | "price_desc";
+  offset?: number; // à partir de quelle annonce
+  limit?: number;  // combien en charger
+  verifiedOnly?: boolean;
 }
 
 export interface SearchResult {
@@ -83,6 +87,16 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
   if (criteria.carAccess) {
     query = query.eq("car_access", true);
   }
+
+  // Logement vérifié uniquement
+  if (criteria.verifiedOnly) {
+    query = query.eq("property_verified", true);
+  }
+
+  // Pagination (chargement par lots)
+  const offset = criteria.offset ?? 0;
+  const limit = criteria.limit ?? 15;
+  query = query.range(offset, offset + limit - 1);
 
   // Tri
   if (criteria.sort === "price_asc") {

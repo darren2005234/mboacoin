@@ -21,6 +21,7 @@ export interface Filters {
   minBedrooms: string;
   furnishing: string;
   carAccess: boolean;
+  verifiedOnly: boolean;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -31,6 +32,7 @@ export const EMPTY_FILTERS: Filters = {
   minBedrooms: "",
   furnishing: "",
   carAccess: false,
+  verifiedOnly: false,
 };
 
 function filtersToCriteria(f: Filters, keywords: string): SearchCriteria {
@@ -43,6 +45,7 @@ function filtersToCriteria(f: Filters, keywords: string): SearchCriteria {
     minBedrooms: f.minBedrooms ? Number(f.minBedrooms) : undefined,
     furnishing: f.furnishing || undefined,
     carAccess: f.carAccess || undefined,
+    verifiedOnly: f.verifiedOnly || undefined,
   };
 }
 
@@ -207,6 +210,17 @@ export function FiltersSheet({
               className="size-4 accent-primary"
             />
             <span className="text-sm font-medium">Accès voiture</span>
+          </label>
+          <label className="flex items-center gap-2.5 rounded-xl border border-seal/30 bg-seal-bg/40 px-4 py-3">
+            <input
+              type="checkbox"
+              checked={filters.verifiedOnly}
+              onChange={(e) => set("verifiedOnly", e.target.checked)}
+              className="size-4 accent-seal"
+            />
+            <span className="flex items-center gap-1.5 text-sm font-medium">
+              <Icon name="verified" size={16} className="text-seal-text" /> Logements vérifiés uniquement
+            </span>
           </label>
         </div>
 

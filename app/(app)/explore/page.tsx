@@ -42,7 +42,7 @@ export default async function ExplorePage() {
       )}
 
       {/* Recherche + résultats (interactif) */}
-      <SearchableListings />
+      <SearchableListings userCity={profile?.city ?? null} />
     </div>
   );
 }

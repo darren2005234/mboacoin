@@ -2,13 +2,19 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { ListingCard, type Listing } from "@/components/mboacoin/listing-card";
+import { ListingCardCompact } from "@/components/mboacoin/listing-card-compact";
+import { ListingRow } from "@/components/mboacoin/listing-row";
+import { Icon } from "@/components/mboacoin/icon";
+import type { Listing } from "@/components/mboacoin/listing-card";
 import { searchListings } from "@/lib/search";
 import { getMyFavoriteIds } from "@/lib/favorites";
+import { getVerifiedListings, getListingsByCity } from "@/lib/home-sections";
 import { FiltersSheet, EMPTY_FILTERS, type Filters } from "@/components/mboacoin/filters-sheet";
 
-// Conserve les filtres pendant la session (mémoire du navigateur)
 const SESSION_KEY = "mboacoin-search-filters";
+const PAGE_SIZE = 15;
+
+type Sort = "recent" | "price_asc" | "price_desc";
 
 function countActiveFilters(f: Filters): number {
   let n = 0;
@@ -19,35 +25,62 @@ function countActiveFilters(f: Filters): number {
   if (f.minBedrooms) n++;
   if (f.furnishing) n++;
   if (f.carAccess) n++;
+  if (f.verifiedOnly) n++;
   return n;
 }
 
-export function SearchableListings() {
+export function SearchableListings({ userCity }: { userCity: string | null }) {
   const [keywords, setKeywords] = useState("");
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<Sort>("recent");
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Résultats (mode recherche OU section "Toutes les annonces" de l'accueil)
   const [listings, setListings] = useState<Listing[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  // Rangées horizontales de l'accueil
+  const [verified, setVerified] = useState<Listing[]>([]);
+  const [cityListings, setCityListings] = useState<Listing[]>([]);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restored = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
 
-  // Charger les favoris une fois
+  const activeCount = countActiveFilters(filters);
+  const isSearching = keywords.trim() !== "" || activeCount > 0;
+
+  // Favoris
   useEffect(() => {
     (async () => {
       setFavoriteIds(await getMyFavoriteIds());
     })();
   }, []);
 
-  // Restaurer les filtres de la session au chargement
+  // Rangées horizontales de l'accueil (sélections figées)
+  useEffect(() => {
+    (async () => {
+      const v = await getVerifiedListings(10);
+      setVerified(v);
+      if (userCity) {
+        setCityListings(await getListingsByCity(userCity, 10));
+      }
+    })();
+  }, [userCity]);
+
+  // Restaurer la session
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SESSION_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         setKeywords(parsed.keywords ?? "");
-        setFilters(parsed.filters ?? EMPTY_FILTERS);
+        setFilters({ ...EMPTY_FILTERS, ...(parsed.filters ?? {}) });
+        setSort(parsed.sort ?? "recent");
       }
     } catch {
       // ignore
@@ -55,19 +88,18 @@ export function SearchableListings() {
     restored.current = true;
   }, []);
 
-  // Sauvegarder les filtres dans la session
+  // Sauvegarder la session
   useEffect(() => {
     if (!restored.current) return;
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ keywords, filters }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ keywords, filters, sort }));
     } catch {
       // ignore
     }
-  }, [keywords, filters]);
+  }, [keywords, filters, sort]);
 
-  const runSearch = useCallback(async (kw: string, f: Filters) => {
-    setLoading(true);
-    const result = await searchListings({
+  const buildCriteria = useCallback(
+    (kw: string, f: Filters, s: Sort, offset: number) => ({
       keywords: kw,
       minPrice: f.minPrice ? Number(f.minPrice) : undefined,
       maxPrice: f.maxPrice ? Number(f.maxPrice) : undefined,
@@ -76,29 +108,137 @@ export function SearchableListings() {
       minBedrooms: f.minBedrooms ? Number(f.minBedrooms) : undefined,
       furnishing: f.furnishing || undefined,
       carAccess: f.carAccess || undefined,
-    });
-    setListings(result.listings);
-    setTotal(result.total);
-    setLoading(false);
-  }, []);
+      verifiedOnly: f.verifiedOnly || undefined,
+      sort: s,
+      offset,
+      limit: PAGE_SIZE,
+    }),
+    []
+  );
 
-  // Recherche initiale + à chaque changement de filtres
+  const runSearch = useCallback(
+    async (kw: string, f: Filters, s: Sort) => {
+      setLoading(true);
+      const result = await searchListings(buildCriteria(kw, f, s, 0));
+      setListings(result.listings);
+      setTotal(result.total);
+      setLoading(false);
+    },
+    [buildCriteria]
+  );
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    if (listings.length >= total) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const result = await searchListings(buildCriteria(keywords, filters, sort, listings.length));
+    setListings((prev) => [...prev, ...result.listings]);
+    setLoadingMore(false);
+    loadingMoreRef.current = false;
+  }, [buildCriteria, keywords, filters, sort, listings.length, total]);
+
+  // Charger/recharger la liste : que ce soit en recherche OU en accueil (Toutes les annonces),
+  // on utilise searchListings. La différence est juste les critères (kw/filtres ou vides).
   useEffect(() => {
     if (!restored.current) return;
-    runSearch(keywords, filters);
+    runSearch(keywords, filters, sort);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, restored.current]);
+  }, [filters, sort, restored.current]);
 
-  // Recherche avec pause quand on tape des mots-clés
-  function onKeywordsChange(value: string) {
-    setKeywords(value);
+  // Relancer la recherche quand les mots-clés changent (frappe OU programmation)
+  useEffect(() => {
+    if (!restored.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      runSearch(value, filters);
+      runSearch(keywords, filters, sort);
     }, 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keywords]);
+
+  function onKeywordsChange(value: string) {
+    setKeywords(value);
   }
 
-  const activeCount = countActiveFilters(filters);
+  // Défilement infini (vaut pour la recherche ET "Toutes les annonces")
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loading) loadMore();
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, loading]);
+
+  // Bloc de grille (résultats), réutilisé dans les deux modes
+  const grid = (
+    <>
+      {loading ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Chargement...</p>
+      ) : listings.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-bold">Aucune annonce trouvée</p>
+          <p className="text-sm text-muted-foreground">Essayez d&apos;élargir votre recherche.</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            {listings.map((l) => (
+              <ListingCardCompact
+                key={`${l.id}-${favoriteIds.has(l.id)}`}
+                listing={l}
+                initialFavorited={favoriteIds.has(l.id)}
+              />
+            ))}
+          </div>
+          {listings.length < total && (
+            <div ref={sentinelRef} className="py-4 text-center">
+              {loadingMore ? (
+                <p className="text-sm text-muted-foreground">Chargement...</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Faites défiler pour voir plus</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+
+  // En-tête de la liste (compteur + tri), réutilisé
+  const listHeader = (title: string) => (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm font-bold">
+        {loading ? "..." : isSearching ? `${total} annonce${total > 1 ? "s" : ""}` : title}
+      </p>
+      <div className="flex items-center gap-2">
+        {isSearching && (
+          <button
+            onClick={() => {
+              setKeywords("");
+              setFilters(EMPTY_FILTERS);
+            }}
+            className="text-sm font-semibold text-primary"
+          >
+            Effacer
+          </button>
+        )}
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as Sort)}
+          className="rounded-lg border border-border bg-card px-2 py-1.5 text-xs font-semibold outline-none focus:border-accent"
+        >
+          <option value="recent">Plus récentes</option>
+          <option value="price_asc">Prix croissant</option>
+          <option value="price_desc">Prix décroissant</option>
+        </select>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col">
@@ -112,11 +252,7 @@ export function SearchableListings() {
             placeholder="Ville, quartier, mot-clé..."
             className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
           />
-          <button
-            aria-label="Filtres"
-            onClick={() => setSheetOpen(true)}
-            className="relative text-primary"
-          >
+          <button aria-label="Filtres" onClick={() => setSheetOpen(true)} className="relative text-primary">
             <SlidersHorizontal className="size-5" strokeWidth={2.25} />
             {activeCount > 0 && (
               <span className="absolute -right-2 -top-2 grid size-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
@@ -127,37 +263,45 @@ export function SearchableListings() {
         </div>
       </div>
 
-      {/* Compteur + liste */}
-      <div className="space-y-4 px-5 pb-8">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold">
-            {loading ? "Recherche..." : `${total} annonce${total > 1 ? "s" : ""}`}
-          </p>
-          {activeCount > 0 && (
-            <button
-              onClick={() => setFilters(EMPTY_FILTERS)}
-              className="text-sm font-semibold text-primary"
-            >
-              Effacer les filtres
-            </button>
-          )}
+      {isSearching ? (
+        /* ===== MODE RECHERCHE ===== */
+        <div className="space-y-4 px-5 pb-8">
+          {listHeader("")}
+          {grid}
         </div>
+      ) : (
+        /* ===== MODE ACCUEIL ===== */
+        <div className="space-y-6 pb-8">
+          <ListingRow
+            title="Logements vérifiés pour vous"
+            listings={verified}
+            favoriteIds={favoriteIds}
+            icon={<Icon name="verified" size={18} className="text-seal-text" />}
+            onSeeAll={() => {
+              setFilters({ ...EMPTY_FILTERS, verifiedOnly: true });
+            }}
+          />
 
-        {loading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Chargement...</p>
-        ) : listings.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border p-10 text-center">
-            <p className="text-sm font-bold">Aucune annonce trouvée</p>
-            <p className="text-sm text-muted-foreground">Essayez d&apos;élargir votre recherche ou vos filtres.</p>
-          </div>
-        ) : (
-          listings.map((l) => (
-            <ListingCard key={l.id} listing={l} initialFavorited={favoriteIds.has(l.id)} />
-          ))
-        )}
-      </div>
+          {userCity && (
+            <ListingRow
+              title="Tout près de chez vous"
+              listings={cityListings}
+              favoriteIds={favoriteIds}
+              icon={<Icon name="location_on" size={18} className="text-accent" />}
+              onSeeAll={() => {
+                setKeywords(userCity);
+              }}
+            />
+          )}
 
-      {/* Panneau de filtres */}
+          {/* Toutes les annonces : catalogue triable + défilement infini */}
+          <section className="space-y-3 px-5">
+            {listHeader("Toutes les annonces")}
+            {grid}
+          </section>
+        </div>
+      )}
+
       <FiltersSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
