@@ -65,7 +65,9 @@ export async function countFavorites(listingId: string): Promise<number> {
 }
 
 /** Récupère les annonces mises en favori par l'utilisateur courant. */
-export async function getMyFavorites(): Promise<(Listing & { available: boolean })[]> {
+export async function getMyFavorites(
+  sort: "recent" | "price_asc" | "price_desc" = "recent"
+): Promise<(Listing & { available: boolean })[]> {
   const supabase = createClient();
   const {
     data: { user },
@@ -75,18 +77,17 @@ export async function getMyFavorites(): Promise<(Listing & { available: boolean 
   const { data, error } = await supabase
     .from("favorites")
     .select(
-      "listing:listings(id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(verification))"
+      "created_at, listing:listings(id, title, city, neighborhood, price, bedrooms, image_url, status, property_verified)"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return [];
 
-  return (data ?? [])
+  const results = (data ?? [])
     .map((row) => {
       const l = Array.isArray(row.listing) ? row.listing[0] : row.listing;
       if (!l) return null;
-      const owner = Array.isArray(l.owner) ? l.owner[0] : l.owner;
       return {
         id: l.id,
         title: l.title,
@@ -95,9 +96,19 @@ export async function getMyFavorites(): Promise<(Listing & { available: boolean 
         priceSuffix: "/ mois",
         image: l.image_url ?? "/img/listings/demo-1.jpg",
         bedrooms: l.bedrooms ?? undefined,
-        verified: owner?.verification === "verifie",
+        verified: l.property_verified ?? false,
         available: l.status === "publiee",
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  // Tri par prix côté JavaScript (fiable), la date étant déjà gérée par la requête
+  if (sort === "price_asc") {
+    results.sort((a, b) => a.price - b.price);
+  } else if (sort === "price_desc") {
+    results.sort((a, b) => b.price - a.price);
+  }
+  // "recent" : on garde l'ordre de la requête (created_at desc)
+
+  return results;
 }

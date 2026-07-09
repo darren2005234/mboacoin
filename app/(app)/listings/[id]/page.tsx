@@ -17,6 +17,7 @@ import { Icon } from "@/components/mboacoin/icon";
 import { countFavoritesServer } from "@/lib/favorites-server";
 import { ListingActions } from "@/components/mboacoin/listing-actions";
 import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
+import { ViewTracker } from "@/components/mboacoin/view-tracker";
 
 export default async function ListingDetailPage({
   params,
@@ -80,6 +81,7 @@ export default async function ListingDetailPage({
 
   return (
     <div className="flex min-h-full flex-col">
+      <ViewTracker listingId={listing.id} />
       <div className="relative shrink-0">
         <Gallery images={listing.images} alt={listing.title} />
         <BackButton />
