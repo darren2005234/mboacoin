@@ -6,8 +6,9 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { getListingForEdit, updateListing } from "@/lib/edit-listing";
+import { PROPERTY_TYPES } from "@/lib/property-types";
+import { PRICE_PERIODS, PRICE_PERIOD_LABELS } from "@/lib/price-period";
 
-const TYPES = ["Studio", "Appartement", "Villa", "Chambre"];
 const AMENITIES = [
   "Climatisation",
   "Groupe électrogène",
@@ -39,6 +40,7 @@ export default function EditListingPage({
   const [city, setCity] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [price, setPrice] = useState("");
+  const [pricePeriod, setPricePeriod] = useState("mensuel");
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [advance, setAdvance] = useState("");
@@ -76,6 +78,7 @@ export default function EditListingPage({
       setNeighborhood(data.neighborhood);
       setAddressDescription(data.addressDescription ?? "");
       setPrice(String(data.price));
+      setPricePeriod(data.pricePeriod ?? "mensuel");
       setBedrooms(data.bedrooms != null ? String(data.bedrooms) : "");
       setBathrooms(data.bathrooms != null ? String(data.bathrooms) : "");
       setAdvance(data.advanceMonths != null ? String(data.advanceMonths) : "");
@@ -105,6 +108,7 @@ export default function EditListingPage({
       city,
       neighborhood,
       price: Number(price),
+      pricePeriod,
       bedrooms: Number(bedrooms) || 0,
       bathrooms: Number(bathrooms) || 0,
       advanceMonths: Number(advance) || 1,
@@ -163,7 +167,7 @@ export default function EditListingPage({
         <div>
           <label className="field-label">Type de bien</label>
           <div className="flex flex-wrap gap-2">
-            {TYPES.map((t) => (
+            {PROPERTY_TYPES.map((t) => (
               <button
                 key={t}
                 type="button"
@@ -205,7 +209,29 @@ export default function EditListingPage({
           </div>
 
         <div>
-          <label className="field-label">Loyer mensuel (FCFA)</label>
+          <label className="field-label">Tarification</label>
+          <div className="flex gap-2">
+            {PRICE_PERIODS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPricePeriod(p)}
+                className={
+                  pricePeriod === p
+                    ? "rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                    : "rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
+                }
+              >
+                {PRICE_PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="field-label">
+            {pricePeriod === "mensuel" ? "Loyer mensuel (FCFA)" : "Prix par jour (FCFA)"}
+          </label>
           <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className={inputCls} />
         </div>
 

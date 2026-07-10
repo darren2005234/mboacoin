@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import { priceSuffixFor } from "@/lib/price-period";
 
 function mapRow(row: {
   id: string;
@@ -7,6 +8,7 @@ function mapRow(row: {
   city: string | null;
   neighborhood: string | null;
   price: number;
+  price_period: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
   rooms: number | null;
@@ -19,7 +21,7 @@ function mapRow(row: {
     title: row.title,
     location: [row.neighborhood, row.city].filter(Boolean).join(", "),
     price: row.price,
-    priceSuffix: "/ mois",
+    priceSuffix: priceSuffixFor(row.price_period),
     image: row.image_url ?? "/img/listings/demo-1.jpg",
     bedrooms: row.bedrooms ?? undefined,
     bathrooms: row.bathrooms ?? undefined,
@@ -30,7 +32,7 @@ function mapRow(row: {
 }
 
 const SELECT =
-  "id, title, city, neighborhood, price, bedrooms, bathrooms, rooms, area, image_url, property_verified";
+  "id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified";
 
 /** Annonces au logement vérifié (mise en avant de la confiance). */
 export async function getVerifiedListings(limit = 10): Promise<Listing[]> {

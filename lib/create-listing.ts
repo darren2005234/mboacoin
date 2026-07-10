@@ -6,6 +6,7 @@ export interface NewListingInput {
   city: string;
   neighborhood: string;
   price: number;
+  pricePeriod: string;
   bedrooms: number;
   bathrooms: number;
   advanceMonths: number;
@@ -65,6 +66,7 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       city: input.city,
       neighborhood: input.neighborhood,
       price: input.price,
+      price_period: input.pricePeriod,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms || null,
       advance_months: input.advanceMonths,

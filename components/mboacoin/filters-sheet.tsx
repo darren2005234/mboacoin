@@ -4,8 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { searchListings, type SearchCriteria } from "@/lib/search";
+import { PROPERTY_TYPES } from "@/lib/property-types";
 
-const TYPES = ["Studio", "Appartement", "Villa", "Chambre"];
 const FURNISHING = [
   { value: "", label: "Peu importe" },
   { value: "non_meuble", label: "Non meublé" },
@@ -145,7 +145,7 @@ export function FiltersSheet({
               >
                 Tous
               </button>
-              {TYPES.map((t) => (
+              {PROPERTY_TYPES.map((t) => (
                 <button
                   key={t}
                   onClick={() => set("propertyType", t)}

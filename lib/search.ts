@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import { priceSuffixFor } from "@/lib/price-period";
 
 
 export interface SearchCriteria {
@@ -32,7 +33,7 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
   let query = supabase
     .from("listings")
     .select(
-      "id, title, city, neighborhood, price, bedrooms, bathrooms, rooms, area, image_url, property_verified",
+      "id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified",
       { count: "exact" } // pour obtenir le nombre total
     )
     .eq("status", "publiee"); // règle : seules les annonces actives
@@ -118,7 +119,7 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
     title: row.title,
     location: [row.neighborhood, row.city].filter(Boolean).join(", "),
     price: row.price,
-    priceSuffix: "/ mois",
+    priceSuffix: priceSuffixFor(row.price_period),
     image: row.image_url ?? "/img/listings/demo-1.jpg",
     bedrooms: row.bedrooms ?? undefined,
     bathrooms: row.bathrooms ?? undefined,

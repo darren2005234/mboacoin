@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import { priceSuffixFor } from "@/lib/price-period";
 
 export interface PublicProfile {
   id: string;
@@ -26,7 +27,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
 
   const { data: listingsData } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, bedrooms, image_url, property_verified")
+    .select("id, title, city, neighborhood, price, price_period, bedrooms, image_url, property_verified")
     .eq("owner_id", userId)
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -38,7 +39,7 @@ export async function getPublicProfile(userId: string): Promise<PublicProfile | 
     title: row.title,
     location: [row.neighborhood, row.city].filter(Boolean).join(", "),
     price: row.price,
-    priceSuffix: "/ mois",
+    priceSuffix: priceSuffixFor(row.price_period),
     image: row.image_url ?? "/img/listings/demo-1.jpg",
     bedrooms: row.bedrooms ?? undefined,
     verified: row.property_verified ?? false,

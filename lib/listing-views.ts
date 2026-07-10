@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import { priceSuffixFor } from "@/lib/price-period";
 
 /** Enregistre qu'une annonce a été consultée (met à jour la date si déjà vue). */
 export async function recordListingView(listingId: string): Promise<void> {
@@ -29,7 +30,7 @@ export async function getMyViewedListings(limit = 30): Promise<(Listing & { avai
   const { data, error } = await supabase
     .from("listing_views")
     .select(
-      "viewed_at, listings!inner(id, title, city, neighborhood, price, bedrooms, bathrooms, rooms, area, image_url, property_verified, status)"
+      "viewed_at, listings!inner(id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified, status)"
     )
     .eq("user_id", user.id)
     .order("viewed_at", { ascending: false })
@@ -46,7 +47,7 @@ export async function getMyViewedListings(limit = 30): Promise<(Listing & { avai
         title: l.title,
         location: [l.neighborhood, l.city].filter(Boolean).join(", "),
         price: l.price,
-        priceSuffix: "/ mois",
+        priceSuffix: priceSuffixFor(l.price_period),
         image: l.image_url ?? "/img/listings/demo-1.jpg",
         bedrooms: l.bedrooms ?? undefined,
         bathrooms: l.bathrooms ?? undefined,

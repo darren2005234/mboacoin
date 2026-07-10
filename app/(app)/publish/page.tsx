@@ -7,8 +7,8 @@ import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { createListing } from "@/lib/create-listing";
 import imageCompression from "browser-image-compression";
-
-const TYPES = ["Studio", "Appartement", "Villa", "Chambre"];
+import { PROPERTY_TYPES } from "@/lib/property-types";
+import { PRICE_PERIODS, PRICE_PERIOD_LABELS } from "@/lib/price-period";
 
 const AMENITIES = [
   "Climatisation",
@@ -33,6 +33,7 @@ export default function PublishPage() {
   const [neighborhood, setNeighborhood] = useState("");
   const [address, setAddress] = useState("");
   const [price, setPrice] = useState("");
+  const [pricePeriod, setPricePeriod] = useState("mensuel");
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [rooms, setRooms] = useState("");
@@ -81,7 +82,7 @@ export default function PublishPage() {
   useEffect(() => {
     if (saveMode !== "active") return;
     const data = {
-      type, title, city, neighborhood, address, price, bedrooms, bathrooms,
+      type, title, city, neighborhood, address, price, pricePeriod, bedrooms, bathrooms,
       rooms, area, advance, deposit, furnishing, water, electricity,
       amenities, availableNow, availableFrom, description, floorNumber, carAccess, floodZone,
     };
@@ -91,7 +92,7 @@ export default function PublishPage() {
       // ignore
     }
   }, [
-    saveMode, type, title, city, neighborhood, address, price, bedrooms, bathrooms,
+    saveMode, type, title, city, neighborhood, address, price, pricePeriod, bedrooms, bathrooms,
     rooms, area, advance, deposit, furnishing, water, electricity,
     amenities, availableNow, availableFrom, description,
   ]);
@@ -107,6 +108,7 @@ function restoreDraft() {
       setNeighborhood(d.neighborhood ?? "");
       setAddress(d.address ?? "");
       setPrice(d.price ?? "");
+      setPricePeriod(d.pricePeriod ?? "mensuel");
       setBedrooms(d.bedrooms ?? "");
       setBathrooms(d.bathrooms ?? "");
       setRooms(d.rooms ?? "");
@@ -224,6 +226,7 @@ function restoreDraft() {
       neighborhood: neighborhoodV,
       addressDescription: address.trim() || null,
       price: priceV,
+      pricePeriod,
       bedrooms: Number(bedrooms) || 0,
       bathrooms: Number(bathrooms) || 0,
       rooms: Number(rooms) || null,
@@ -306,7 +309,7 @@ function restoreDraft() {
         <div>
           <label className="field-label">Type de bien</label>
           <div className="flex flex-wrap gap-2">
-            {TYPES.map((t) => (
+            {PROPERTY_TYPES.map((t) => (
               <button
                 key={t}
                 type="button"
@@ -379,8 +382,29 @@ function restoreDraft() {
         </div>
 
         <div>
+          <label className="field-label">Tarification</label>
+          <div className="flex gap-2">
+            {PRICE_PERIODS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPricePeriod(p)}
+                className={
+                  pricePeriod === p
+                    ? "rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+                    : "rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
+                }
+              >
+                {PRICE_PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label htmlFor="price" className="field-label">
-            Loyer mensuel (FCFA)<span className="text-destructive"> *</span>
+            {pricePeriod === "mensuel" ? "Loyer mensuel (FCFA)" : "Prix par jour (FCFA)"}
+            <span className="text-destructive"> *</span>
           </label>
           <input
             id="price"

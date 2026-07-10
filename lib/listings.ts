@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import { priceSuffixFor } from "@/lib/price-period";
 
 
 /** Récupère les annonces publiées, les plus récentes d'abord. */
@@ -8,7 +9,7 @@ export async function getPublishedListings(): Promise<Listing[]> {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, city, neighborhood, price, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification), bathrooms, rooms, area, property_verified"
+      "id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification), bathrooms, rooms, area, property_verified"
     )
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -25,7 +26,7 @@ export async function getPublishedListings(): Promise<Listing[]> {
       title: row.title,
       location: [row.neighborhood, row.city].filter(Boolean).join(", "),
       price: row.price,
-      priceSuffix: "/ mois",
+      priceSuffix: priceSuffixFor(row.price_period),
       image: row.image_url ?? "/img/listings/demo-1.jpg",
       bedrooms: row.bedrooms ?? undefined,
       bathrooms: row.bathrooms ?? undefined,
@@ -64,7 +65,7 @@ export async function getListingById(id: string) {
     description: (data.description as string | null) ?? null,
     location: [data.neighborhood, data.city].filter(Boolean).join(", "),
     price: data.price,
-    priceSuffix: "/ mois",
+    priceSuffix: priceSuffixFor(data.price_period),
     images: gallery,
     bedrooms: data.bedrooms ?? null,
     bathrooms: data.bathrooms ?? null,

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import { priceSuffixFor } from "@/lib/price-period";
 
 /** Ajoute ou retire une annonce des favoris. Retourne le nouvel état. */
 export async function toggleFavorite(
@@ -77,7 +78,7 @@ export async function getMyFavorites(
   const { data, error } = await supabase
     .from("favorites")
     .select(
-      "created_at, listing:listings(id, title, city, neighborhood, price, bedrooms, image_url, status, property_verified)"
+      "created_at, listing:listings(id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, property_verified)"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
@@ -93,7 +94,7 @@ export async function getMyFavorites(
         title: l.title,
         location: [l.neighborhood, l.city].filter(Boolean).join(", "),
         price: l.price,
-        priceSuffix: "/ mois",
+        priceSuffix: priceSuffixFor(l.price_period),
         image: l.image_url ?? "/img/listings/demo-1.jpg",
         bedrooms: l.bedrooms ?? undefined,
         verified: l.property_verified ?? false,
