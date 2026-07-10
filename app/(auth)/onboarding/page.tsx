@@ -4,10 +4,12 @@ import { useState, useTransition } from "react";
 import { completeProfile } from "./actions";
 import { Wordmark } from "@/components/mboacoin/wordmark";
 import { Button } from "@/components/ui/button";
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/account-types";
 
 export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [accountType, setAccountType] = useState("personne_physique");
 
   function action(formData: FormData) {
     setError(null);
@@ -52,6 +54,27 @@ export default function OnboardingPage() {
               placeholder="Ex : Douala"
               className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
             />
+          </div>
+
+          <div>
+            <label className="field-label">Type de compte</label>
+            <div className="flex flex-col gap-2">
+              {ACCOUNT_TYPES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setAccountType(t)}
+                  className={
+                    accountType === t
+                      ? "rounded-xl bg-primary px-4 py-3 text-left text-sm font-bold text-primary-foreground"
+                      : "rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                  }
+                >
+                  {ACCOUNT_TYPE_LABELS[t]}
+                </button>
+              ))}
+            </div>
+            <input type="hidden" name="account_type" value={accountType} />
           </div>
 
           {error && <p className="text-sm font-medium text-destructive">{error}</p>}

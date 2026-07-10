@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Button } from "@/components/ui/button";
 import { getMyProfileForEdit, updateMyProfile } from "@/lib/edit-profile";
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/account-types";
 
 export default function EditProfilePage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [city, setCity] = useState("");
+  const [accountType, setAccountType] = useState("personne_physique");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,6 +28,7 @@ export default function EditProfilePage() {
       }
       setFullName(data.fullName);
       setCity(data.city);
+      setAccountType(data.accountType);
       setEmail(data.email);
       setBio(data.bio);
       setLoading(false);
@@ -39,7 +42,7 @@ export default function EditProfilePage() {
       return;
     }
     setSaving(true);
-    const result = await updateMyProfile({ fullName, city, email, bio });
+    const result = await updateMyProfile({ fullName, city, email, bio, accountType });
     if (result.error) {
       setError(result.error);
       setSaving(false);
@@ -70,6 +73,26 @@ export default function EditProfilePage() {
         <div>
           <label className="field-label">Ville</label>
           <input value={city} onChange={(e) => setCity(e.target.value)} className={inputCls} placeholder="Ex : Douala" />
+        </div>
+
+        <div>
+          <label className="field-label">Type de compte</label>
+          <div className="flex flex-col gap-2">
+            {ACCOUNT_TYPES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setAccountType(t)}
+                className={
+                  accountType === t
+                    ? "rounded-xl bg-primary px-4 py-3 text-left text-sm font-bold text-primary-foreground"
+                    : "rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                }
+              >
+                {ACCOUNT_TYPE_LABELS[t]}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
