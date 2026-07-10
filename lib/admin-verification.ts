@@ -9,6 +9,9 @@ export interface PendingVerification {
   selfieUrl: string;
   isPdf: boolean;
   createdAt: string;
+  entityDocumentUrl: string | null;
+  entityDocumentType: string | null;
+  entityIsPdf: boolean;
 }
 
 /** Liste les demandes de vérification en attente (admin uniquement). */
@@ -17,7 +20,9 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
 
   const { data, error } = await supabase
     .from("verification_requests")
-    .select("id, user_id, document_path, selfie_path, document_type, created_at, profiles(full_name)")
+    .select(
+      "id, user_id, document_path, selfie_path, document_type, entity_document_path, entity_document_type, created_at, profiles(full_name)"
+    )
     .eq("status", "en_attente")
     .order("created_at", { ascending: true });
 
@@ -40,6 +45,15 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
       selfieUrl = signedSelfie?.signedUrl ?? "";
     }
 
+    // URL signée du document d'entité (1h), si présent (agence/résidence)
+    let entityDocumentUrl: string | null = null;
+    if (row.entity_document_path) {
+      const { data: signedEntity } = await supabase.storage
+        .from("identity-documents")
+        .createSignedUrl(row.entity_document_path, 3600);
+      entityDocumentUrl = signedEntity?.signedUrl ?? "";
+    }
+
     results.push({
       id: row.id,
       userId: row.user_id,
@@ -49,6 +63,9 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
       selfieUrl,
       isPdf: row.document_path.toLowerCase().endsWith(".pdf"),
       createdAt: row.created_at,
+      entityDocumentUrl,
+      entityDocumentType: row.entity_document_type,
+      entityIsPdf: row.entity_document_path ? row.entity_document_path.toLowerCase().endsWith(".pdf") : false,
     });
   }
   return results;

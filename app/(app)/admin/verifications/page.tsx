@@ -104,6 +104,39 @@ export default function AdminVerificationsPage() {
                   </p>
                 </div>
               )}
+              {/* Document d'entité (comptes agence/résidence uniquement) */}
+              {item.entityDocumentUrl && (
+                <div className="border-t border-border">
+                  <div className="relative h-56 bg-secondary">
+                    <span className="absolute left-2 top-2 z-10 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                      Document de l&apos;entité
+                    </span>
+                    {!item.entityDocumentUrl ? (
+                      <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                        Document indisponible
+                      </div>
+                    ) : item.entityIsPdf ? (
+                      <a
+                        href={item.entityDocumentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-full flex-col items-center justify-center gap-2 text-center"
+                      >
+                        <Icon name="picture_as_pdf" size={40} className="text-destructive" />
+                        <span className="text-sm font-semibold text-primary underline">Ouvrir le PDF</span>
+                        <span className="text-xs text-muted-foreground">S&apos;ouvre dans un nouvel onglet</span>
+                      </a>
+                    ) : (
+                      <Image src={item.entityDocumentUrl} alt="Document de l'entité" fill className="object-contain" sizes="400px" unoptimized />
+                    )}
+                  </div>
+                  {item.entityDocumentType && (
+                    <p className="bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
+                      Type : {item.entityDocumentType}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="space-y-3 p-4">
                 <div>
                   <p className="text-sm font-bold">{item.userName}</p>

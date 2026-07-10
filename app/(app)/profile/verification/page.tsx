@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
-import { getMyVerificationStatus, submitVerification } from "@/lib/verification";
+import { getMyVerificationStatus, submitVerification, getMyAccountType } from "@/lib/verification";
 import { CameraCapture } from "@/components/mboacoin/camera-capture";
+import { ENTITY_DOCUMENT_TYPES } from "@/lib/entity-document-types";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -17,6 +18,7 @@ export default function VerificationPage() {
   const [status, setStatus] = useState<string>("aucune");
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountType, setAccountType] = useState("personne_physique");
   const [docType, setDocType] = useState(DOC_TYPES[0]);
   const [file, setFile] = useState<File | null>(null);
   const [selfie, setSelfie] = useState<File | null>(null);
@@ -25,13 +27,20 @@ export default function VerificationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [entityDocType, setEntityDocType] = useState(ENTITY_DOCUMENT_TYPES[0]);
+  const [entityDocTypeOther, setEntityDocTypeOther] = useState("");
+  const [entityFile, setEntityFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const entityInputRef = useRef<HTMLInputElement>(null);
+
+  const isEntity = accountType === "agence" || accountType === "residence";
 
   useEffect(() => {
     (async () => {
-      const s = await getMyVerificationStatus();
+      const [s, type] = await Promise.all([getMyVerificationStatus(), getMyAccountType()]);
       setStatus(s.status);
       setRejectionReason(s.rejectionReason);
+      setAccountType(type);
       setLoading(false);
     })();
   }, []);
@@ -54,8 +63,22 @@ export default function VerificationPage() {
       setError("Prenez votre photo en direct.");
       return;
     }
+    const resolvedEntityType = entityDocType === "Autre" ? entityDocTypeOther.trim() : entityDocType;
+    if (isEntity && !entityFile) {
+      setError("Ajoutez le document de votre entité.");
+      return;
+    }
+    if (isEntity && !resolvedEntityType) {
+      setError("Précisez le type de document de votre entité.");
+      return;
+    }
     setSubmitting(true);
-    const result = await submitVerification(file, docType, selfie);
+    const result = await submitVerification(
+      file,
+      docType,
+      selfie,
+      isEntity && entityFile ? { file: entityFile, type: resolvedEntityType } : undefined
+    );
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
@@ -202,6 +225,62 @@ export default function VerificationPage() {
             Cette photo, prise sur le moment, permet de confirmer que vous êtes bien la personne du document.
           </p>
         </div>
+
+        {isEntity && (
+          <div className="space-y-5 rounded-2xl border border-border bg-secondary/30 p-4">
+            <div>
+              <p className="text-sm font-bold">Document de l&apos;entité</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                En plus de votre identité, votre compte {accountType === "agence" ? "agence" : "résidence"} doit fournir un document prouvant l&apos;entité.
+              </p>
+            </div>
+
+            <div>
+              <label className="field-label">Type de document</label>
+              <select
+                value={entityDocType}
+                onChange={(e) => setEntityDocType(e.target.value)}
+                className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+              >
+                {ENTITY_DOCUMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {entityDocType === "Autre" && (
+              <div>
+                <label className="field-label">Précisez le type de document</label>
+                <input
+                  value={entityDocTypeOther}
+                  onChange={(e) => setEntityDocTypeOther(e.target.value)}
+                  placeholder="Ex : Autorisation municipale"
+                  className="w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="field-label">Photo ou PDF du document</label>
+              <button
+                onClick={() => entityInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card py-8 text-center"
+              >
+                <Icon name={entityFile ? "check_circle" : "add_a_photo"} size={26} className={entityFile ? "text-ok-text" : "text-muted-foreground"} filled={false} />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {entityFile ? entityFile.name : "Ajouter le document de l'entité"}
+                </span>
+              </button>
+              <input
+                ref={entityInputRef}
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={(e) => setEntityFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
