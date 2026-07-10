@@ -7,7 +7,8 @@ export interface CurrentProfile {
   city: string | null;
   avatarUrl: string | null;
   role: string;
-  verification: string
+  verification: string;
+  accountType: string;
 }
 
 /** Récupère l'utilisateur connecté et son profil, ou null si pas de session. */
@@ -21,7 +22,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, city, avatar_url, role, verification")
+    .select("id, full_name, phone, city, avatar_url, role, verification, account_type")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -33,5 +34,6 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     avatarUrl: data?.avatar_url ?? null,
     role: data?.role ?? "locataire",
     verification: data?.verification ?? "non_verifie",
+    accountType: data?.account_type ?? "personne_physique",
   };
 }

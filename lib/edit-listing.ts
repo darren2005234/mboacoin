@@ -22,6 +22,8 @@ export interface EditableListing {
   floorNumber: number | null;
   carAccess: boolean;
   floodZone: boolean;
+  residenceId: string | null;
+  pricePeriod: string;
 }
 
 /** Charge une annonce pour l'édition (seulement si on en est le propriétaire). */
@@ -37,7 +39,7 @@ export async function getListingForEdit(
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone"
+      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period"
     )
     .eq("id", listingId)
     .maybeSingle();
@@ -67,6 +69,8 @@ export async function getListingForEdit(
     floorNumber: data.floor_number ?? null,
     carAccess: data.car_access ?? false,
     floodZone: data.flood_zone ?? false,
+    residenceId: (data.residence_id as string | null) ?? null,
+    pricePeriod: (data.price_period as string | null) ?? "mensuel",
   };
 }
 
