@@ -12,6 +12,7 @@ import { searchListings, searchResidences } from "@/lib/search";
 import { getMyFavoriteIds } from "@/lib/favorites";
 import { getVerifiedListings, getListingsByCity, getVerifiedResidences } from "@/lib/home-sections";
 import { FiltersSheet, EMPTY_FILTERS, type Filters } from "@/components/mboacoin/filters-sheet";
+import { logSearchEvent } from "@/lib/search-events";
 
 const SESSION_KEY = "mboacoin-search-filters";
 const PAGE_SIZE = 15;
@@ -59,6 +60,7 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
   const residenceLoadingMoreRef = useRef(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchLogDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restored = useRef(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
@@ -225,6 +227,23 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMoreResidences, residenceLoading]);
+
+  // Collecte analytique : enregistrer une recherche "stabilisée" (1,5s sans changement),
+  // jamais si elle est vide. Debounce séparé de celui de la recherche elle-même (300ms).
+  useEffect(() => {
+    if (!restored.current) return;
+    if (searchTarget !== "logements") return;
+    if (searchLogDebounceRef.current) clearTimeout(searchLogDebounceRef.current);
+    if (!isSearching) return;
+    searchLogDebounceRef.current = setTimeout(() => {
+      if (loading) return;
+      logSearchEvent(keywords, filters, total);
+    }, 1500);
+    return () => {
+      if (searchLogDebounceRef.current) clearTimeout(searchLogDebounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keywords, filters, searchTarget]);
 
   // Bloc de grille (résultats), réutilisé dans les deux modes
   const grid = (
