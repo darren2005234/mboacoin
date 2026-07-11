@@ -3,21 +3,26 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Price } from "@/components/mboacoin/price";
 import { Icon } from "@/components/mboacoin/icon";
 import { priceSuffixFor } from "@/lib/price-period";
 import { getMyLeases, type MyLease } from "@/lib/leases";
+import { getLeasesLateStatus } from "@/lib/lease-payments";
 
 export default function MyLeasesPage() {
   const router = useRouter();
   const [leases, setLeases] = useState<MyLease[]>([]);
+  const [lateStatus, setLateStatus] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMyLeases().then((data) => {
+    getMyLeases().then(async (data) => {
       setLeases(data);
       setLoading(false);
+      const active = data.filter((l) => l.status === "actif");
+      setLateStatus(await getLeasesLateStatus(active));
     });
   }, []);
 
@@ -43,7 +48,11 @@ export default function MyLeasesPage() {
       ) : (
         <div className="space-y-3 px-5 pb-8">
           {leases.map((l) => (
-            <div key={l.id} className="rounded-2xl border border-border bg-card p-3 shadow-card">
+            <Link
+              key={l.id}
+              href={`/my-leases/${l.id}`}
+              className="block rounded-2xl border border-border bg-card p-3 shadow-card"
+            >
               <div className="flex items-center gap-3">
                 <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-secondary">
                   <Image src={l.listingImage} alt="" fill className="object-cover" sizes="64px" />
@@ -56,6 +65,15 @@ export default function MyLeasesPage() {
                   <div className="mt-1 flex items-center gap-2">
                     <Price amount={l.rentAmount} suffix={priceSuffixFor(l.paymentPeriod)} size="sm" />
                     <StatusBadge status={l.status} />
+                    {l.status === "actif" && (
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                          lateStatus[l.id] ? "bg-destructive/10 text-destructive" : "bg-ok-bg text-ok-text"
+                        }`}
+                      >
+                        {lateStatus[l.id] ? "En retard" : "À jour"}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -63,7 +81,7 @@ export default function MyLeasesPage() {
                 <span>Début : {new Date(l.startDate).toLocaleDateString("fr-FR")}</span>
                 <span>{l.durationMonths ? `${l.durationMonths} mois` : "Durée indéterminée"}</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

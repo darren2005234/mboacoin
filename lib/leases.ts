@@ -124,6 +124,7 @@ export interface MyLease {
   durationMonths: number | null;
   endDate: string | null;
   rentAmount: number;
+  paymentDay: number | null;
   paymentPeriod: string;
   createdAt: string;
 }
@@ -139,7 +140,7 @@ export async function getMyLeases(): Promise<MyLease[]> {
   const { data, error } = await supabase
     .from("leases")
     .select(
-      "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, payment_period, created_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name)"
+      "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, payment_day, payment_period, created_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name)"
     )
     .eq("landlord_id", user.id)
     .order("created_at", { ascending: false });
@@ -161,10 +162,51 @@ export async function getMyLeases(): Promise<MyLease[]> {
       durationMonths: row.duration_months,
       endDate: row.end_date,
       rentAmount: row.rent_amount,
+      paymentDay: row.payment_day,
       paymentPeriod: row.payment_period,
       createdAt: row.created_at,
     };
   });
+}
+
+/** Un bail précis de l'utilisateur connecté en tant que bailleur, ou null (pas trouvé/pas le sien). */
+export async function getMyLeaseById(leaseId: string): Promise<MyLease | null> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("leases")
+    .select(
+      "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, payment_day, payment_period, created_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name)"
+    )
+    .eq("id", leaseId)
+    .eq("landlord_id", user.id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const listing = Array.isArray(data.listing) ? data.listing[0] : data.listing;
+  const tenant = Array.isArray(data.tenant) ? data.tenant[0] : data.tenant;
+
+  return {
+    id: data.id,
+    listingId: data.listing_id,
+    listingTitle: listing?.title ?? "Logement",
+    listingImage: listing?.image_url ?? "/img/listings/demo-1.jpg",
+    tenantPhone: data.tenant_phone,
+    tenantName: tenant?.full_name ?? null,
+    status: data.status,
+    startDate: data.start_date,
+    durationMonths: data.duration_months,
+    endDate: data.end_date,
+    rentAmount: data.rent_amount,
+    paymentDay: data.payment_day,
+    paymentPeriod: data.payment_period,
+    createdAt: data.created_at,
+  };
 }
 
 export interface LeaseCounterparty {

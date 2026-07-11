@@ -7,7 +7,7 @@ import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Price } from "@/components/mboacoin/price";
 import { Icon } from "@/components/mboacoin/icon";
 import { priceSuffixFor } from "@/lib/price-period";
-import { nextPaymentDueDate } from "@/lib/lease-schedule";
+import { nextPaymentDueDate, generateDueDates } from "@/lib/lease-schedule";
 import { createClient } from "@/lib/supabase/server";
 
 interface LeaseDetailRow {
@@ -50,6 +50,19 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
   const listing = Array.isArray(row.listing) ? row.listing[0] : row.listing;
   const landlord = Array.isArray(row.landlord) ? row.landlord[0] : row.landlord;
   const dueDate = nextPaymentDueDate(row.start_date, row.payment_day, row.payment_period);
+
+  const { data: paymentRows } = await supabase
+    .from("lease_payments")
+    .select("id, period, amount, paid_at, receipt_number")
+    .eq("lease_id", row.id)
+    .order("period", { ascending: false });
+  const payments = paymentRows ?? [];
+
+  const today = new Date().toISOString().slice(0, 10);
+  const paidPeriods = new Set(payments.map((p) => p.period));
+  const isLate = generateDueDates(row.start_date, row.payment_day, row.payment_period).some(
+    (period) => period < today && !paidPeriods.has(period)
+  );
 
   return (
     <div className="flex flex-col pb-8">
@@ -101,7 +114,7 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
           <span className="icon-badge size-11">
             <Icon name="event" size={20} />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-bold">
               {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
             </p>
@@ -109,10 +122,46 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
               {row.payment_period === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
             </p>
           </div>
+          {isLate && (
+            <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
+              En retard
+            </span>
+          )}
         </div>
 
-        {/* Les paiements, quittances (Bail-3) et demandes d'intervention (Bail-4)
-            s'ajouteront ici comme cartes supplémentaires. */}
+        {/* Historique des paiements */}
+        <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-card">
+          <p className="text-sm font-bold">Historique des paiements</p>
+          {payments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Aucun paiement enregistré pour l&apos;instant.</p>
+          ) : (
+            <div className="space-y-2">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 border-t border-border pt-2 first:border-t-0 first:pt-0">
+                  <div>
+                    <p className="text-xs font-bold capitalize">
+                      {new Date(p.period).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Payé le {new Date(p.paid_at).toLocaleDateString("fr-FR")} · <Price amount={p.amount} size="sm" />
+                    </p>
+                  </div>
+                  <a
+                    href={`/api/receipts/${p.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-secondary px-3 py-1.5 text-xs font-bold"
+                  >
+                    Quittance
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Les demandes d'intervention (Bail-4) s'ajouteront ici comme carte
+            supplémentaire. */}
       </div>
     </div>
   );
