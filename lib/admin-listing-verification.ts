@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { requireAdminClient } from "@/lib/admin-guard";
 
 export interface PendingListingVerif {
   id: string;
@@ -12,6 +13,9 @@ export interface PendingListingVerif {
 
 /** Liste les demandes de vérification de logement en attente (admin). */
 export async function getPendingListingVerifs(): Promise<PendingListingVerif[]> {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return [];
+
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -46,6 +50,9 @@ export async function getPendingListingVerifs(): Promise<PendingListingVerif[]> 
 
 /** Valide : logement vérifié + demande validée. */
 export async function approveListingVerif(verifId: string, listingId: string) {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return { error: guard.error };
+
   const supabase = createClient();
   const { error: e1 } = await supabase
     .from("listing_verifications")
@@ -64,6 +71,9 @@ export async function approveListingVerif(verifId: string, listingId: string) {
 
 /** Rejette une demande avec un motif. */
 export async function rejectListingVerif(verifId: string, reason: string) {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return { error: guard.error };
+
   const supabase = createClient();
   const { error } = await supabase
     .from("listing_verifications")

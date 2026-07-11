@@ -49,3 +49,14 @@ export async function requireAccountType(type: string, fallback = "/profile"): P
   if (profile.accountType !== type) redirect(fallback);
   return profile;
 }
+
+/**
+ * Garde d'accès serveur réservée aux administrateurs. Redirige avant tout rendu
+ * si l'utilisateur n'est pas connecté ou si son rôle n'est pas "admin".
+ */
+export async function requireAdmin(fallback = "/explore"): Promise<CurrentProfile> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "admin") redirect(fallback);
+  return profile;
+}

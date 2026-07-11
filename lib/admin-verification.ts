@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { requireAdminClient } from "@/lib/admin-guard";
 
 export interface PendingVerification {
   id: string;
@@ -16,6 +17,9 @@ export interface PendingVerification {
 
 /** Liste les demandes de vérification en attente (admin uniquement). */
 export async function getPendingVerifications(): Promise<PendingVerification[]> {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return [];
+
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -73,6 +77,9 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
 
 /** Valide une demande : profil vérifié + demande validée. */
 export async function approveVerification(requestId: string, userId: string) {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return { error: guard.error };
+
   const supabase = createClient();
   const { error: e1 } = await supabase
     .from("verification_requests")
@@ -91,6 +98,9 @@ export async function approveVerification(requestId: string, userId: string) {
 
 /** Rejette une demande avec un motif. */
 export async function rejectVerification(requestId: string, userId: string, reason: string) {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return { error: guard.error };
+
   const supabase = createClient();
   const { error: e1 } = await supabase
     .from("verification_requests")
