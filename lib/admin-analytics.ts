@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { requireAdminClient } from "@/lib/admin-guard";
+import { bucketizeBudgets, type BudgetBucket } from "@/lib/budget-buckets";
 
 export interface RecentSearchEvent {
   id: string;
@@ -123,24 +124,10 @@ export async function getTopSearchTerms(limit = 10): Promise<TopSearchTermsResul
   return { terms, sampleSize: rows.length };
 }
 
-export interface BudgetBucket {
-  label: string;
-  count: number;
-}
-
 export interface BudgetDistributionResult {
   buckets: BudgetBucket[];
   sampleSize: number;
 }
-
-const BUDGET_BUCKETS: { label: string; max: number }[] = [
-  { label: "< 50 000 FCFA", max: 50_000 },
-  { label: "50 000 – 100 000 FCFA", max: 100_000 },
-  { label: "100 000 – 150 000 FCFA", max: 150_000 },
-  { label: "150 000 – 250 000 FCFA", max: 250_000 },
-  { label: "250 000 – 500 000 FCFA", max: 500_000 },
-  { label: "500 000 FCFA et plus", max: Infinity },
-];
 
 /** Répartition des budgets recherchés (min_price/max_price), sur une fenêtre récente. */
 export async function getBudgetDistribution(): Promise<BudgetDistributionResult> {
@@ -156,15 +143,8 @@ export async function getBudgetDistribution(): Promise<BudgetDistributionResult>
     .limit(RECENT_WINDOW);
 
   const rows = data ?? [];
-  const buckets = BUDGET_BUCKETS.map((b) => ({ label: b.label, count: 0 }));
-
-  for (const row of rows) {
-    const value = row.max_price ?? row.min_price;
-    if (value == null) continue;
-    const idx = BUDGET_BUCKETS.findIndex((b) => value < b.max);
-    const bucket = buckets[idx === -1 ? buckets.length - 1 : idx];
-    bucket.count++;
-  }
+  const values = rows.map((row) => row.max_price ?? row.min_price).filter((v): v is number => v != null);
+  const buckets = bucketizeBudgets(values);
 
   return { buckets, sampleSize: rows.length };
 }

@@ -15,6 +15,20 @@ export interface PendingVerification {
   entityIsPdf: boolean;
 }
 
+/** Nombre de demandes de vérification d'identité en attente (admin uniquement, comptage léger). */
+export async function getPendingVerificationsCount(): Promise<number> {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return 0;
+
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("verification_requests")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "en_attente");
+
+  return count ?? 0;
+}
+
 /** Liste les demandes de vérification en attente (admin uniquement). */
 export async function getPendingVerifications(): Promise<PendingVerification[]> {
   const guard = await requireAdminClient();

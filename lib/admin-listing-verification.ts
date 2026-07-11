@@ -11,6 +11,20 @@ export interface PendingListingVerif {
   createdAt: string;
 }
 
+/** Nombre de demandes de vérification de logement en attente (admin uniquement, comptage léger). */
+export async function getPendingListingVerifsCount(): Promise<number> {
+  const guard = await requireAdminClient();
+  if (!guard.ok) return 0;
+
+  const supabase = createClient();
+  const { count } = await supabase
+    .from("listing_verifications")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "en_attente");
+
+  return count ?? 0;
+}
+
 /** Liste les demandes de vérification de logement en attente (admin). */
 export async function getPendingListingVerifs(): Promise<PendingListingVerif[]> {
   const guard = await requireAdminClient();

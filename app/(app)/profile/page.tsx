@@ -48,14 +48,14 @@ export default async function ProfilePage() {
         {profile.accountType === "residence" && (
           <MenuRow icon="location_city" label="Mes résidences" href="/my-residences" />
         )}
+        {(profile.accountType === "agence" || profile.accountType === "residence") && (
+          <MenuRow icon="query_stats" label="Statistiques" href="/analytics" />
+        )}
         <MenuRow icon="settings" label="Paramètres" />
         <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
         <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
         {profile.role === "admin" && (
-          <MenuRow icon="admin_panel_settings" label="Administration — Vérifications" href="/admin/verifications" />
-        )}
-        {profile.role === "admin" && (
-          <MenuRow icon="video_library" label="Administration — Vidéos logement" href="/admin/listing-verifications" />
+          <MenuRow icon="admin_panel_settings" label="Administration" href="/admin" />
         )}
       </div>
 

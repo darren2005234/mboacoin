@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
+import { SampleNote } from "@/components/mboacoin/sample-note";
 import {
   getRecentSearches,
   getZeroResultSearches,
@@ -18,8 +19,6 @@ import {
   type ListingStat,
 } from "@/lib/admin-analytics";
 
-const LOW_SAMPLE_THRESHOLD = 10;
-
 function summarizeFilters(s: RecentSearchEvent): string {
   const parts: string[] = [];
   if (s.propertyType) parts.push(s.propertyType);
@@ -32,17 +31,6 @@ function summarizeFilters(s: RecentSearchEvent): string {
   if (s.carAccess) parts.push("Accès voiture");
   if (s.verifiedOnly) parts.push("Vérifiés uniquement");
   return parts.length > 0 ? parts.join(" · ") : "Aucun filtre";
-}
-
-function SampleNote({ size }: { size: number }) {
-  return (
-    <p className="text-xs text-muted-foreground">
-      Calculé sur {size} recherche{size > 1 ? "s" : ""}.
-      {size < LOW_SAMPLE_THRESHOLD && (
-        <span className="ml-1 font-semibold text-pending-text">Échantillon trop faible pour être significatif.</span>
-      )}
-    </p>
-  );
 }
 
 function SearchEventRow({ event }: { event: RecentSearchEvent }) {

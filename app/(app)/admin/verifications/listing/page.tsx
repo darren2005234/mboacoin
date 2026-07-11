@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,9 @@ export default function AdminListingVerifsPage() {
 
   return (
     <div className="flex flex-col pb-8">
+      <Link href="/admin/verifications" aria-label="Retour" className="absolute left-4 top-4 z-10 text-muted-foreground">
+        <ArrowLeft className="size-5" />
+      </Link>
       <ScreenHeader title="Vérifications logement" subtitle="Vidéos de logements en attente." />
 
       {loading ? (

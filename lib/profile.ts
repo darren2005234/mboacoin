@@ -43,10 +43,11 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
  * Garde d'accès serveur : redirige si l'utilisateur n'est pas connecté ou si son
  * compte n'est pas du type requis. À appeler en tête d'un Server Component de page.
  */
-export async function requireAccountType(type: string, fallback = "/profile"): Promise<CurrentProfile> {
+export async function requireAccountType(types: string | string[], fallback = "/profile"): Promise<CurrentProfile> {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-  if (profile.accountType !== type) redirect(fallback);
+  const allowed = Array.isArray(types) ? types : [types];
+  if (!allowed.includes(profile.accountType)) redirect(fallback);
   return profile;
 }
 
