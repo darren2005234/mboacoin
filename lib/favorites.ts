@@ -78,7 +78,7 @@ export async function getMyFavorites(
   const { data, error } = await supabase
     .from("favorites")
     .select(
-      "created_at, listing:listings(id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, property_verified)"
+      "created_at, listing:listings(id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, property_verified, residence_id, residence:residences(name))"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
@@ -89,6 +89,7 @@ export async function getMyFavorites(
     .map((row) => {
       const l = Array.isArray(row.listing) ? row.listing[0] : row.listing;
       if (!l) return null;
+      const residence = Array.isArray(l.residence) ? l.residence[0] : l.residence;
       return {
         id: l.id,
         title: l.title,
@@ -99,6 +100,8 @@ export async function getMyFavorites(
         bedrooms: l.bedrooms ?? undefined,
         verified: l.property_verified ?? false,
         available: l.status === "publiee",
+        residenceId: l.residence_id ?? undefined,
+        residenceName: residence?.name ?? undefined,
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);

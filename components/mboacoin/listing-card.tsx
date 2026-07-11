@@ -25,6 +25,8 @@ export interface Listing {
   rooms?: number;
   area?: number;
   propertyVerified?: boolean;
+  residenceId?: string;
+  residenceName?: string;
 }
 
 interface ListingCardProps {
@@ -119,6 +121,11 @@ export function ListingCard({ listing, onOpen, className, initialFavorited, unav
         <p className="flex items-center gap-1 text-[13px] text-muted-foreground">
           <MapPin className="size-3" /> {listing.location}
         </p>
+        {listing.residenceName && (
+          <p className="flex items-center gap-1 text-[12px] font-medium text-accent">
+            <Icon name="apartment" size={13} /> <span className="line-clamp-1">{listing.residenceName}</span>
+          </p>
+        )}
         {(listing.area || listing.rooms || listing.bedrooms || listing.bathrooms) && (
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-[13px] font-medium text-foreground/70">
             {listing.area ? (

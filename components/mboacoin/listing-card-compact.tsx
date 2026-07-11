@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Price } from "./price";
 import { TrustSeal } from "./trust-seal";
 import { toggleFavorite } from "@/lib/favorites";
+import { Icon } from "@/components/mboacoin/icon";
 import type { Listing } from "./listing-card";
 
 interface Props {
@@ -95,6 +96,11 @@ export function ListingCardCompact({ listing, initialFavorited, unavailable, siz
           <MapPin className="size-3 shrink-0" />
           <span className="line-clamp-1">{listing.location}</span>
         </p>
+        {listing.residenceName && (
+          <p className="flex items-center gap-1 text-[10px] font-medium text-accent">
+            <Icon name="apartment" size={11} /> <span className="line-clamp-1">{listing.residenceName}</span>
+          </p>
+        )}
       </div>
     </article>
   );

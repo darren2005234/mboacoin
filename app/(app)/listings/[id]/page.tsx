@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MessageSquare, CalendarDays } from "lucide-react";
 import { getListingById } from "@/lib/listings";
@@ -158,6 +159,27 @@ export default async function ListingDetailPage({
             </div>
           </div>
         </Link>
+        {listing.residenceId && listing.residenceName && (
+          <Link
+            href={`/residences/${listing.residenceId}`}
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+          >
+            <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-secondary">
+              <Image
+                src={listing.residenceImage ?? "/img/listings/demo-1.jpg"}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="56px"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">Ce logement fait partie de la Résidence {listing.residenceName}</p>
+              <p className="line-clamp-1 text-xs text-muted-foreground">{listing.residenceLocation}</p>
+            </div>
+            <Icon name="chevron_right" size={20} className="text-muted-foreground" />
+          </Link>
+        )}
         <ListingFeatures
           features={{
             rooms: listing.rooms,

@@ -9,7 +9,7 @@ export async function getPublishedListings(): Promise<Listing[]> {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification), bathrooms, rooms, area, property_verified"
+      "id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, owner:profiles!listings_owner_id_fkey(full_name, verification), bathrooms, rooms, area, property_verified, residence_id, residence:residences(name)"
     )
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -21,6 +21,7 @@ export async function getPublishedListings(): Promise<Listing[]> {
 
   return (data ?? []).map((row) => {
     const owner = Array.isArray(row.owner) ? row.owner[0] : row.owner;
+    const residence = Array.isArray(row.residence) ? row.residence[0] : row.residence;
     return {
       id: row.id,
       title: row.title,
@@ -33,7 +34,8 @@ export async function getPublishedListings(): Promise<Listing[]> {
       rooms: row.rooms ?? undefined,
       area: row.area ?? undefined,
       verified: row.property_verified ?? false,
-      
+      residenceId: row.residence_id ?? undefined,
+      residenceName: residence?.name ?? undefined,
     };
   });
 }
@@ -44,7 +46,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone, residence_id, price_period"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone, residence_id, price_period, residence:residences(name, image_url, city, neighborhood)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -52,6 +54,7 @@ export async function getListingById(id: string) {
   if (error || !data) return null;
 
   const owner = Array.isArray(data.owner) ? data.owner[0] : data.owner;
+  const residence = Array.isArray(data.residence) ? data.residence[0] : data.residence;
 
   const media = (data.media ?? []) as { storage_path: string; position: number }[];
   const images = media
@@ -91,6 +94,9 @@ export async function getListingById(id: string) {
     floodZone: data.flood_zone ?? false,
     residenceId: (data.residence_id as string | null) ?? null,
     pricePeriod: (data.price_period as string | null) ?? "mensuel",
+    residenceName: residence?.name ?? null,
+    residenceImage: residence?.image_url ?? null,
+    residenceLocation: residence ? [residence.neighborhood, residence.city].filter(Boolean).join(", ") : null,
   };
 }
 

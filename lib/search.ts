@@ -33,7 +33,7 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
   let query = supabase
     .from("listings")
     .select(
-      "id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified",
+      "id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified, residence_id, residence:residences(name)",
       { count: "exact" } // pour obtenir le nombre total
     )
     .eq("status", "publiee"); // règle : seules les annonces actives
@@ -114,19 +114,24 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
     return { listings: [], total: 0 };
   }
 
-  const listings: Listing[] = (data ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    location: [row.neighborhood, row.city].filter(Boolean).join(", "),
-    price: row.price,
-    priceSuffix: priceSuffixFor(row.price_period),
-    image: row.image_url ?? "/img/listings/demo-1.jpg",
-    bedrooms: row.bedrooms ?? undefined,
-    bathrooms: row.bathrooms ?? undefined,
-    rooms: row.rooms ?? undefined,
-    area: row.area ?? undefined,
-    verified: row.property_verified ?? false,
-  }));
+  const listings: Listing[] = (data ?? []).map((row) => {
+    const residence = Array.isArray(row.residence) ? row.residence[0] : row.residence;
+    return {
+      id: row.id,
+      title: row.title,
+      location: [row.neighborhood, row.city].filter(Boolean).join(", "),
+      price: row.price,
+      priceSuffix: priceSuffixFor(row.price_period),
+      image: row.image_url ?? "/img/listings/demo-1.jpg",
+      bedrooms: row.bedrooms ?? undefined,
+      bathrooms: row.bathrooms ?? undefined,
+      rooms: row.rooms ?? undefined,
+      area: row.area ?? undefined,
+      verified: row.property_verified ?? false,
+      residenceId: row.residence_id ?? undefined,
+      residenceName: residence?.name ?? undefined,
+    };
+  });
 
   return { listings, total: count ?? 0 };
 }

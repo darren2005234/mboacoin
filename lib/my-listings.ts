@@ -17,24 +17,29 @@ export async function getMyListings(): Promise<MyListing[]> {
 
   const { data, error } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, property_verified")
+    .select("id, title, city, neighborhood, price, price_period, bedrooms, image_url, status, property_verified, residence_id, residence:residences(name)")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return [];
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    location: [row.neighborhood, row.city].filter(Boolean).join(", "),
-    price: row.price,
-    priceSuffix: priceSuffixFor(row.price_period),
-    image: row.image_url ?? "/img/listings/demo-1.jpg",
-    bedrooms: row.bedrooms ?? undefined,
-    verified: false,
-    status: row.status,
-    propertyVerified: row.property_verified ?? false,
-  }));
+  return (data ?? []).map((row) => {
+    const residence = Array.isArray(row.residence) ? row.residence[0] : row.residence;
+    return {
+      id: row.id,
+      title: row.title,
+      location: [row.neighborhood, row.city].filter(Boolean).join(", "),
+      price: row.price,
+      priceSuffix: priceSuffixFor(row.price_period),
+      image: row.image_url ?? "/img/listings/demo-1.jpg",
+      bedrooms: row.bedrooms ?? undefined,
+      verified: false,
+      status: row.status,
+      propertyVerified: row.property_verified ?? false,
+      residenceId: row.residence_id ?? undefined,
+      residenceName: residence?.name ?? undefined,
+    };
+  });
 }
 
 /** Change le statut d'une annonce (ex: la marquer louée, ou la republier). */

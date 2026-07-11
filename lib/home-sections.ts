@@ -15,7 +15,10 @@ function mapRow(row: {
   area: number | null;
   image_url: string | null;
   property_verified: boolean | null;
+  residence_id: string | null;
+  residence: { name: string } | { name: string }[] | null;
 }): Listing {
+  const residence = Array.isArray(row.residence) ? row.residence[0] : row.residence;
   return {
     id: row.id,
     title: row.title,
@@ -28,11 +31,13 @@ function mapRow(row: {
     rooms: row.rooms ?? undefined,
     area: row.area ?? undefined,
     verified: row.property_verified ?? false,
+    residenceId: row.residence_id ?? undefined,
+    residenceName: residence?.name ?? undefined,
   };
 }
 
 const SELECT =
-  "id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified";
+  "id, title, city, neighborhood, price, price_period, bedrooms, bathrooms, rooms, area, image_url, property_verified, residence_id, residence:residences(name)";
 
 /** Annonces au logement vérifié (mise en avant de la confiance). */
 export async function getVerifiedListings(limit = 10): Promise<Listing[]> {
