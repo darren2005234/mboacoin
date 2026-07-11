@@ -9,6 +9,7 @@ import { Icon } from "@/components/mboacoin/icon";
 import { priceSuffixFor } from "@/lib/price-period";
 import { nextPaymentDueDate, generateDueDates } from "@/lib/lease-schedule";
 import { createClient } from "@/lib/supabase/server";
+import { TenantLeaseActions } from "@/components/mboacoin/tenant-lease-actions";
 
 interface LeaseDetailRow {
   id: string;
@@ -64,6 +65,34 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
     (period) => period < today && !paidPeriods.has(period)
   );
 
+  const { data: amendmentRow } = await supabase
+    .from("lease_amendments")
+    .select("id, reason, new_rent_amount, new_deposit_amount, new_advance_amount, new_payment_day, new_end_date")
+    .eq("lease_id", row.id)
+    .eq("status", "en_attente")
+    .maybeSingle();
+
+  const { data: requestRows } = await supabase
+    .from("lease_requests")
+    .select("id, status")
+    .eq("lease_id", row.id);
+  const requests = requestRows ?? [];
+  const openRequests = requests.filter((r) => r.status === "nouvelle" || r.status === "en_cours").length;
+
+  const { data: documentRows } = await supabase
+    .from("lease_documents")
+    .select("storage_path")
+    .eq("lease_id", row.id)
+    .eq("document_type", "contrat")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const contractPath = documentRows?.[0]?.storage_path ?? null;
+  let contractUrl: string | null = null;
+  if (contractPath) {
+    const { data: signed } = await supabase.storage.from("lease-contracts").createSignedUrl(contractPath, 3600);
+    contractUrl = signed?.signedUrl ?? null;
+  }
+
   return (
     <div className="flex flex-col pb-8">
       <ScreenHeader title="Ma location" />
@@ -108,6 +137,29 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
             {row.payment_day ? <Info label="Jour de paiement" value={String(row.payment_day)} /> : null}
           </div>
         </div>
+
+        {/* Modification proposée / résiliation */}
+        <TenantLeaseActions
+          leaseId={row.id}
+          currentRentAmount={row.rent_amount}
+          currentDepositAmount={row.deposit_amount}
+          currentAdvanceAmount={row.advance_amount}
+          currentPaymentDay={row.payment_day}
+          currentEndDate={row.end_date}
+          amendment={
+            amendmentRow
+              ? {
+                  id: amendmentRow.id,
+                  reason: amendmentRow.reason,
+                  newRentAmount: amendmentRow.new_rent_amount,
+                  newDepositAmount: amendmentRow.new_deposit_amount,
+                  newAdvanceAmount: amendmentRow.new_advance_amount,
+                  newPaymentDay: amendmentRow.new_payment_day,
+                  newEndDate: amendmentRow.new_end_date,
+                }
+              : null
+          }
+        />
 
         {/* Prochaine échéance */}
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card">
@@ -160,8 +212,41 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
 
-        {/* Les demandes d'intervention (Bail-4) s'ajouteront ici comme carte
-            supplémentaire. */}
+        {/* Demandes */}
+        <Link
+          href={`/my-lease/${row.id}/requests`}
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        >
+          <span className="icon-badge size-11">
+            <Icon name="handyman" size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold">Mes demandes</p>
+            <p className="text-xs text-muted-foreground">
+              {requests.length === 0
+                ? "Réparation, question, démarche..."
+                : `${requests.length} demande(s)${openRequests > 0 ? `, ${openRequests} en cours` : ""}`}
+            </p>
+          </div>
+          <Icon name="chevron_right" size={20} className="text-muted-foreground" />
+        </Link>
+
+        {/* Contrat de bail */}
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
+          <p className="text-sm font-bold">Contrat de bail</p>
+          {contractUrl ? (
+            <a
+              href={contractUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs font-semibold text-accent"
+            >
+              <Icon name="description" size={16} /> Consulter le contrat
+            </a>
+          ) : (
+            <p className="text-xs text-muted-foreground">Votre bailleur n&apos;a pas encore ajouté le contrat.</p>
+          )}
+        </div>
       </div>
     </div>
   );

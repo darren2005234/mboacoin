@@ -58,3 +58,12 @@ export function generateDueDates(
   }
   return dates;
 }
+
+/** Nombre de jours entre aujourd'hui et une date ISO (négatif si passée). */
+export function daysUntil(dateIso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateIso);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}

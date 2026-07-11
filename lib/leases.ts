@@ -55,7 +55,7 @@ export interface CreateLeaseResult {
   error?: string;
 }
 
-function addMonths(dateStr: string, months: number): string {
+export function addMonths(dateStr: string, months: number): string {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + months);
   return d.toISOString().slice(0, 10);
@@ -119,14 +119,70 @@ export interface MyLease {
   listingImage: string;
   tenantPhone: string;
   tenantName: string | null;
+  tenantVerified: boolean;
   status: string;
   startDate: string;
   durationMonths: number | null;
   endDate: string | null;
   rentAmount: number;
+  depositAmount: number | null;
+  advanceAmount: number | null;
   paymentDay: number | null;
   paymentPeriod: string;
   createdAt: string;
+  endReason: string | null;
+  endedAt: string | null;
+}
+
+const MY_LEASE_SELECT =
+  "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, created_at, end_reason, ended_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name, verification)";
+
+function mapMyLeaseRow(row: {
+  id: string;
+  listing_id: string;
+  tenant_phone: string;
+  status: string;
+  start_date: string;
+  duration_months: number | null;
+  end_date: string | null;
+  rent_amount: number;
+  deposit_amount: number | null;
+  advance_amount: number | null;
+  payment_day: number | null;
+  payment_period: string;
+  created_at: string;
+  end_reason: string | null;
+  ended_at: string | null;
+  listing: unknown;
+  tenant: unknown;
+}): MyLease {
+  type ListingJoin = { title: string; image_url: string | null };
+  type TenantJoin = { full_name: string | null; verification: string };
+
+  const listing = (Array.isArray(row.listing) ? row.listing[0] : row.listing) as ListingJoin | null;
+  const tenant = (Array.isArray(row.tenant) ? row.tenant[0] : row.tenant) as TenantJoin | null;
+
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    listingTitle: listing?.title ?? "Logement",
+    listingImage: listing?.image_url ?? "/img/listings/demo-1.jpg",
+    tenantPhone: row.tenant_phone,
+    tenantName: tenant?.full_name ?? null,
+    tenantVerified: tenant?.verification === "verifie",
+    status: row.status,
+    startDate: row.start_date,
+    durationMonths: row.duration_months,
+    endDate: row.end_date,
+    rentAmount: row.rent_amount,
+    depositAmount: row.deposit_amount,
+    advanceAmount: row.advance_amount,
+    paymentDay: row.payment_day,
+    paymentPeriod: row.payment_period,
+    createdAt: row.created_at,
+    endReason: row.end_reason,
+    endedAt: row.ended_at,
+  };
 }
 
 /** Baux de l'utilisateur connecté en tant que bailleur. */
@@ -139,34 +195,12 @@ export async function getMyLeases(): Promise<MyLease[]> {
 
   const { data, error } = await supabase
     .from("leases")
-    .select(
-      "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, payment_day, payment_period, created_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name)"
-    )
+    .select(MY_LEASE_SELECT)
     .eq("landlord_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) return [];
-
-  return (data ?? []).map((row) => {
-    const listing = Array.isArray(row.listing) ? row.listing[0] : row.listing;
-    const tenant = Array.isArray(row.tenant) ? row.tenant[0] : row.tenant;
-    return {
-      id: row.id,
-      listingId: row.listing_id,
-      listingTitle: listing?.title ?? "Logement",
-      listingImage: listing?.image_url ?? "/img/listings/demo-1.jpg",
-      tenantPhone: row.tenant_phone,
-      tenantName: tenant?.full_name ?? null,
-      status: row.status,
-      startDate: row.start_date,
-      durationMonths: row.duration_months,
-      endDate: row.end_date,
-      rentAmount: row.rent_amount,
-      paymentDay: row.payment_day,
-      paymentPeriod: row.payment_period,
-      createdAt: row.created_at,
-    };
-  });
+  return (data ?? []).map(mapMyLeaseRow);
 }
 
 /** Un bail précis de l'utilisateur connecté en tant que bailleur, ou null (pas trouvé/pas le sien). */
@@ -179,34 +213,13 @@ export async function getMyLeaseById(leaseId: string): Promise<MyLease | null> {
 
   const { data, error } = await supabase
     .from("leases")
-    .select(
-      "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, payment_day, payment_period, created_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name)"
-    )
+    .select(MY_LEASE_SELECT)
     .eq("id", leaseId)
     .eq("landlord_id", user.id)
     .maybeSingle();
 
   if (error || !data) return null;
-
-  const listing = Array.isArray(data.listing) ? data.listing[0] : data.listing;
-  const tenant = Array.isArray(data.tenant) ? data.tenant[0] : data.tenant;
-
-  return {
-    id: data.id,
-    listingId: data.listing_id,
-    listingTitle: listing?.title ?? "Logement",
-    listingImage: listing?.image_url ?? "/img/listings/demo-1.jpg",
-    tenantPhone: data.tenant_phone,
-    tenantName: tenant?.full_name ?? null,
-    status: data.status,
-    startDate: data.start_date,
-    durationMonths: data.duration_months,
-    endDate: data.end_date,
-    rentAmount: data.rent_amount,
-    paymentDay: data.payment_day,
-    paymentPeriod: data.payment_period,
-    createdAt: data.created_at,
-  };
+  return mapMyLeaseRow(data);
 }
 
 export interface LeaseCounterparty {
@@ -349,5 +362,91 @@ export async function rejectLease(leaseId: string): Promise<{ error?: string }> 
     .single();
 
   if (error) return { error: "Ce bail n'est plus en attente de confirmation." };
+  return {};
+}
+
+export interface UpdatePendingLeaseInput {
+  tenantPhone: string;
+  startDate: string;
+  durationMonths: number | null;
+  rentAmount: number;
+  depositAmount: number | null;
+  advanceAmount: number | null;
+  paymentDay: number | null;
+  paymentPeriod: string;
+}
+
+/** Corrige un bail encore en attente de confirmation (bailleur du bail uniquement). */
+export async function updatePendingLease(
+  leaseId: string,
+  input: UpdatePendingLeaseInput
+): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const endDate = input.durationMonths ? addMonths(input.startDate, input.durationMonths) : null;
+
+  const { error } = await supabase
+    .from("leases")
+    .update({
+      tenant_phone: input.tenantPhone,
+      start_date: input.startDate,
+      duration_months: input.durationMonths,
+      end_date: endDate,
+      rent_amount: input.rentAmount,
+      deposit_amount: input.depositAmount,
+      advance_amount: input.advanceAmount,
+      payment_day: input.paymentDay,
+      payment_period: input.paymentPeriod,
+    })
+    .eq("id", leaseId)
+    .select("id")
+    .single();
+
+  if (error) return { error: "Ce bail ne peut plus être modifié (déjà confirmé/refusé/annulé)." };
+  return {};
+}
+
+/** Annule un bail encore en attente de confirmation (bailleur du bail uniquement). */
+export async function cancelPendingLease(leaseId: string, reason?: string): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("leases")
+    .update({ status: "annule", end_reason: reason?.trim() || null })
+    .eq("id", leaseId)
+    .select("id")
+    .single();
+
+  if (error) return { error: "Ce bail ne peut plus être annulé." };
+  return {};
+}
+
+/** Met fin à un bail actif (bailleur du bail uniquement). */
+export async function endActiveLease(
+  leaseId: string,
+  status: "termine" | "arrete",
+  reason?: string
+): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("leases")
+    .update({ status, end_reason: reason?.trim() || null })
+    .eq("id", leaseId)
+    .select("id")
+    .single();
+
+  if (error) return { error: "Ce bail ne peut plus être terminé." };
+  return {};
+}
+
+/** Résilie un bail actif (locataire du bail uniquement). */
+export async function resiliateLease(leaseId: string, reason?: string): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("leases")
+    .update({ status: "resilie", end_reason: reason?.trim() || null })
+    .eq("id", leaseId)
+    .select("id")
+    .single();
+
+  if (error) return { error: "Ce bail ne peut plus être résilié." };
   return {};
 }
