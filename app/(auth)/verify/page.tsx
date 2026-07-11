@@ -27,6 +27,8 @@ function VerifyInner() {
       });
       if (error) throw error;
 
+      await supabase.rpc("link_my_pending_leases");
+
       const userId = data.user?.id;
       const { data: profile } = await supabase
         .from("profiles")

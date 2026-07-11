@@ -45,6 +45,7 @@ export default async function ProfilePage() {
         <MenuRow icon="edit" label="Modifier mon profil" href="/profile/edit" />
         <MenuRow icon="verified_user" label="Vérifier mon identité" href="/profile/verification" />
         <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
+        <MenuRow icon="key" label="Mes baux" href="/my-leases" />
         {profile.accountType === "residence" && (
           <MenuRow icon="location_city" label="Mes résidences" href="/my-residences" />
         )}
