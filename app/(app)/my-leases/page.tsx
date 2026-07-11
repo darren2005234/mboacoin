@@ -75,7 +75,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     en_attente_confirmation: { label: "En attente", cls: "bg-pending-bg text-pending-text" },
     actif: { label: "Actif", cls: "bg-ok-bg text-ok-text" },
-    rejete: { label: "Rejeté", cls: "bg-secondary text-muted-foreground" },
+    rejete: { label: "Rejeté", cls: "bg-destructive/10 text-destructive" },
     termine: { label: "Terminé", cls: "bg-secondary text-muted-foreground" },
     resilie: { label: "Résilié", cls: "bg-secondary text-muted-foreground" },
     arrete: { label: "Arrêté", cls: "bg-secondary text-muted-foreground" },

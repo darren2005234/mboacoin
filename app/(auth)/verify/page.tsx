@@ -36,11 +36,18 @@ function VerifyInner() {
         .eq("id", userId!)
         .maybeSingle();
 
-      if (profile?.full_name) {
-        router.push("/explore");
-      } else {
+      if (!profile?.full_name) {
         router.push("/onboarding");
+        return;
       }
+
+      const { count } = await supabase
+        .from("leases")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", userId!)
+        .eq("status", "en_attente_confirmation");
+
+      router.push(count && count > 0 ? "/my-lease/confirm" : "/explore");
     } catch {
       setError("Code invalide ou expiré. Réessayez.");
       setLoading(false);

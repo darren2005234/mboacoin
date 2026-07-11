@@ -7,10 +7,19 @@ import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { EditableAvatar } from "@/components/mboacoin/editable-avatar";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ProfilePage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+
+  const supabase = await createClient();
+  const { count: activeLeaseCount } = await supabase
+    .from("leases")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", profile.id)
+    .eq("status", "actif");
+  const hasActiveLease = (activeLeaseCount ?? 0) > 0;
 
   return (
     <div className="flex flex-col">
@@ -46,6 +55,7 @@ export default async function ProfilePage() {
         <MenuRow icon="verified_user" label="Vérifier mon identité" href="/profile/verification" />
         <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
         <MenuRow icon="key" label="Mes baux" href="/my-leases" />
+        {hasActiveLease && <MenuRow icon="home" label="Ma location" href="/my-lease" />}
         {profile.accountType === "residence" && (
           <MenuRow icon="location_city" label="Mes résidences" href="/my-residences" />
         )}

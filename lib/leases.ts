@@ -166,3 +166,146 @@ export async function getMyLeases(): Promise<MyLease[]> {
     };
   });
 }
+
+export interface LeaseCounterparty {
+  fullName: string | null;
+  avatarUrl: string | null;
+  verified: boolean;
+}
+
+export interface PendingLease {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  listingImage: string;
+  listingLocation: string;
+  landlord: LeaseCounterparty;
+  startDate: string;
+  durationMonths: number | null;
+  endDate: string | null;
+  rentAmount: number;
+  depositAmount: number | null;
+  advanceAmount: number | null;
+  paymentDay: number | null;
+  paymentPeriod: string;
+}
+
+const PENDING_LEASE_SELECT =
+  "id, listing_id, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, listing:listings(title, image_url, city, neighborhood), landlord:profiles!landlord_id(full_name, avatar_url, verification)";
+
+function mapPendingLeaseRow(row: {
+  id: string;
+  listing_id: string;
+  start_date: string;
+  duration_months: number | null;
+  end_date: string | null;
+  rent_amount: number;
+  deposit_amount: number | null;
+  advance_amount: number | null;
+  payment_day: number | null;
+  payment_period: string;
+  listing: unknown;
+  landlord: unknown;
+}): PendingLease {
+  type ListingJoin = { title: string; image_url: string | null; city: string; neighborhood: string | null };
+  type LandlordJoin = { full_name: string | null; avatar_url: string | null; verification: string };
+
+  const listingRaw = row.listing;
+  const landlordRaw = row.landlord;
+  const listing = (Array.isArray(listingRaw) ? listingRaw[0] : listingRaw) as ListingJoin | null;
+  const landlord = (Array.isArray(landlordRaw) ? landlordRaw[0] : landlordRaw) as LandlordJoin | null;
+
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    listingTitle: listing?.title ?? "Logement",
+    listingImage: listing?.image_url ?? "/img/listings/demo-1.jpg",
+    listingLocation: [listing?.neighborhood, listing?.city].filter(Boolean).join(", "),
+    landlord: {
+      fullName: landlord?.full_name ?? null,
+      avatarUrl: landlord?.avatar_url ?? null,
+      verified: landlord?.verification === "verifie",
+    },
+    startDate: row.start_date,
+    durationMonths: row.duration_months,
+    endDate: row.end_date,
+    rentAmount: row.rent_amount,
+    depositAmount: row.deposit_amount,
+    advanceAmount: row.advance_amount,
+    paymentDay: row.payment_day,
+    paymentPeriod: row.payment_period,
+  };
+}
+
+/** Baux en attente de confirmation où l'utilisateur connecté est le locataire rattaché. */
+export async function getMyPendingLeases(): Promise<PendingLease[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("leases")
+    .select(PENDING_LEASE_SELECT)
+    .eq("tenant_id", user.id)
+    .eq("status", "en_attente_confirmation")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return (data ?? []).map(mapPendingLeaseRow);
+}
+
+export interface ActiveLease extends PendingLease {
+  confirmedAt: string | null;
+}
+
+/** Baux actifs où l'utilisateur connecté est le locataire. */
+export async function getMyActiveLeases(): Promise<ActiveLease[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("leases")
+    .select(`${PENDING_LEASE_SELECT}, confirmed_at`)
+    .eq("tenant_id", user.id)
+    .eq("status", "actif")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return (data ?? []).map((row) => ({
+    ...mapPendingLeaseRow(row),
+    confirmedAt: row.confirmed_at,
+  }));
+}
+
+/** Confirme un bail en attente dont l'utilisateur connecté est le locataire rattaché. */
+export async function confirmLease(leaseId: string): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("leases")
+    .update({ status: "actif" })
+    .eq("id", leaseId)
+    .select("id")
+    .single();
+
+  if (error) return { error: "Ce bail n'est plus en attente de confirmation." };
+  return {};
+}
+
+/** Refuse un bail en attente dont l'utilisateur connecté est le locataire rattaché. */
+export async function rejectLease(leaseId: string): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("leases")
+    .update({ status: "rejete" })
+    .eq("id", leaseId)
+    .select("id")
+    .single();
+
+  if (error) return { error: "Ce bail n'est plus en attente de confirmation." };
+  return {};
+}

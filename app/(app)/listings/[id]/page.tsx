@@ -36,9 +36,19 @@ export default async function ListingDetailPage({
   } = await supabase.auth.getUser();
   if (!listing) notFound();
   const isOwner = user?.id === listing.ownerId;
+  let isTenant = false;
+  if (user && !isOwner) {
+    const { count } = await supabase
+      .from("leases")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", listing.id)
+      .eq("tenant_id", user.id)
+      .in("status", ["en_attente_confirmation", "actif"]);
+    isTenant = (count ?? 0) > 0;
+  }
   const favoritesCount = await countFavoritesServer(listing.id);
   const isFavorited = favoriteIds.has(listing.id);
-  if (!listing.available) {
+  if (!listing.available && !isTenant) {
     if (isOwner) {
   
       return (
@@ -234,12 +244,14 @@ export default async function ListingDetailPage({
         )}
       </div>
 
-      <div className="sticky bottom-0 flex gap-3 border-t border-border bg-card p-4">
-        <ContactButton listingId={listing.id} ownerId={listing.ownerId} />
-        <Button size="lg" className="flex-1">
-          <CalendarDays className="size-5" /> Visiter
-        </Button>
-      </div>
+      {!isTenant && (
+        <div className="sticky bottom-0 flex gap-3 border-t border-border bg-card p-4">
+          <ContactButton listingId={listing.id} ownerId={listing.ownerId} />
+          <Button size="lg" className="flex-1">
+            <CalendarDays className="size-5" /> Visiter
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
