@@ -81,6 +81,7 @@ export interface UpdateListingInput {
   neighborhood: string;
   price: number;
   pricePeriod: string;
+  residenceId: string | null;
   bedrooms: number;
   bathrooms: number;
   advanceMonths: number;
@@ -111,6 +112,17 @@ export async function updateListing(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Vous devez être connecté." };
 
+  if (input.residenceId) {
+    const { data: residence } = await supabase
+      .from("residences")
+      .select("manager_id")
+      .eq("id", input.residenceId)
+      .maybeSingle();
+    if (!residence || residence.manager_id !== user.id) {
+      return { error: "Résidence invalide." };
+    }
+  }
+
   // 1. Mise à jour des champs
   const { error } = await supabase
     .from("listings")
@@ -121,6 +133,7 @@ export async function updateListing(
       neighborhood: input.neighborhood,
       price: input.price,
       price_period: input.pricePeriod,
+      residence_id: input.residenceId,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms || null,
       advance_months: input.advanceMonths,

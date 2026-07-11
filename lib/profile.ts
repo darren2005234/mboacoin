@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export interface CurrentProfile {
@@ -36,4 +37,15 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     verification: data?.verification ?? "non_verifie",
     accountType: data?.account_type ?? "personne_physique",
   };
+}
+
+/**
+ * Garde d'accès serveur : redirige si l'utilisateur n'est pas connecté ou si son
+ * compte n'est pas du type requis. À appeler en tête d'un Server Component de page.
+ */
+export async function requireAccountType(type: string, fallback = "/profile"): Promise<CurrentProfile> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (profile.accountType !== type) redirect(fallback);
+  return profile;
 }

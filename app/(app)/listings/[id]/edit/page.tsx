@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { getListingForEdit, updateListing } from "@/lib/edit-listing";
 import { PROPERTY_TYPES } from "@/lib/property-types";
 import { PRICE_PERIODS, PRICE_PERIOD_LABELS } from "@/lib/price-period";
+import { getMyAccountType } from "@/lib/verification";
+import { getMyResidences, type Residence } from "@/lib/residences";
 
 const AMENITIES = [
   "Climatisation",
@@ -59,6 +61,19 @@ export default function EditListingPage({
   const [floorNumber, setFloorNumber] = useState("");
   const [carAccess, setCarAccess] = useState(false);
   const [floodZone, setFloodZone] = useState(false);
+  const [accountType, setAccountType] = useState("personne_physique");
+  const [residences, setResidences] = useState<Residence[]>([]);
+  const [residenceId, setResidenceId] = useState("");
+
+  // Résidences du gestionnaire, seulement pour les comptes résidence
+  useEffect(() => {
+    getMyAccountType().then((type) => {
+      setAccountType(type);
+      if (type === "residence") {
+        getMyResidences().then(setResidences);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -91,6 +106,7 @@ export default function EditListingPage({
       setFloorNumber(data.floorNumber != null ? String(data.floorNumber) : "");
       setCarAccess(data.carAccess);
       setFloodZone(data.floodZone);
+      setResidenceId(data.residenceId ?? "");
       setLoading(false);
     })();
   }, [id]);
@@ -109,6 +125,7 @@ export default function EditListingPage({
       neighborhood,
       price: Number(price),
       pricePeriod,
+      residenceId: residenceId || null,
       bedrooms: Number(bedrooms) || 0,
       bathrooms: Number(bathrooms) || 0,
       advanceMonths: Number(advance) || 1,
@@ -207,6 +224,18 @@ export default function EditListingPage({
               className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
             />
           </div>
+
+        {accountType === "residence" && (
+          <div>
+            <label className="field-label">Résidence</label>
+            <select value={residenceId} onChange={(e) => setResidenceId(e.target.value)} className={inputCls}>
+              <option value="">Aucune (bien isolé)</option>
+              {residences.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="field-label">Tarification</label>

@@ -7,6 +7,7 @@ export interface NewListingInput {
   neighborhood: string;
   price: number;
   pricePeriod: string;
+  residenceId: string | null;
   bedrooms: number;
   bathrooms: number;
   advanceMonths: number;
@@ -39,6 +40,27 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
   } = await supabase.auth.getUser();
   if (!user) return { error: "Vous devez être connecté." };
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("account_type, verification")
+    .eq("id", user.id)
+    .maybeSingle();
+  const needsVerification = profile?.account_type === "agence" || profile?.account_type === "residence";
+  if (needsVerification && profile?.verification !== "verifie") {
+    return { error: "Votre compte doit être vérifié pour publier une annonce." };
+  }
+
+  if (input.residenceId) {
+    const { data: residence } = await supabase
+      .from("residences")
+      .select("manager_id")
+      .eq("id", input.residenceId)
+      .maybeSingle();
+    if (!residence || residence.manager_id !== user.id) {
+      return { error: "Résidence invalide." };
+    }
+  }
+
   // 1. Téléverser les photos et mémoriser leurs chemins
   const paths: string[] = [];
   for (const file of input.files) {
@@ -67,6 +89,7 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       neighborhood: input.neighborhood,
       price: input.price,
       price_period: input.pricePeriod,
+      residence_id: input.residenceId,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms || null,
       advance_months: input.advanceMonths,
