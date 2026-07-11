@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import type { ResidenceSearchResult } from "@/components/mboacoin/residence-card-compact";
 import { priceSuffixFor } from "@/lib/price-period";
 
 
@@ -134,4 +135,57 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
   });
 
   return { listings, total: count ?? 0 };
+}
+
+export interface ResidenceSearchCriteria {
+  keywords?: string;
+  offset?: number;
+  limit?: number;
+}
+
+export interface ResidenceSearchOutput {
+  residences: ResidenceSearchResult[];
+  total: number;
+}
+
+/** Recherche des résidences par mot-clé (nom, ville, quartier, description). */
+export async function searchResidences(criteria: ResidenceSearchCriteria): Promise<ResidenceSearchOutput> {
+  const supabase = createClient();
+  let query = supabase
+    .from("residences")
+    .select("id, name, city, neighborhood, image_url, manager_id", { count: "exact" });
+
+  if (criteria.keywords && criteria.keywords.trim()) {
+    const kw = criteria.keywords.trim();
+    query = query.or(`name.ilike.%${kw}%,city.ilike.%${kw}%,neighborhood.ilike.%${kw}%,description.ilike.%${kw}%`);
+  }
+
+  const offset = criteria.offset ?? 0;
+  const limit = criteria.limit ?? 15;
+  query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+  if (error || !data) return { residences: [], total: 0 };
+
+  const managerIds = [...new Set(data.map((r) => r.manager_id))];
+  const { data: managers } = await supabase.from("profiles").select("id, verification").in("id", managerIds);
+  const verifiedIds = new Set((managers ?? []).filter((m) => m.verification === "verifie").map((m) => m.id));
+
+  const counts = await Promise.all(
+    data.map((r) =>
+      supabase.from("listings").select("*", { count: "exact", head: true }).eq("residence_id", r.id).eq("status", "publiee")
+    )
+  );
+
+  return {
+    residences: data.map((r, i) => ({
+      id: r.id,
+      name: r.name,
+      location: [r.neighborhood, r.city].filter(Boolean).join(", "),
+      imageUrl: r.image_url,
+      managerVerified: verifiedIds.has(r.manager_id),
+      availableCount: counts[i].count ?? 0,
+    })),
+    total: count ?? 0,
+  };
 }

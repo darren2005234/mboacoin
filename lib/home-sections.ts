@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
+import type { ResidenceSearchResult } from "@/components/mboacoin/residence-card-compact";
 import { priceSuffixFor } from "@/lib/price-period";
 
 function mapRow(row: {
@@ -75,4 +76,38 @@ export async function getListingsByCity(city: string, limit = 10): Promise<Listi
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []).map(mapRow);
+}
+
+/** Résidences dont le gestionnaire est vérifié, les plus récentes d'abord. */
+export async function getVerifiedResidences(limit = 10): Promise<ResidenceSearchResult[]> {
+  const supabase = createClient();
+  // Lot plus large trié par date, puis filtré par gestionnaire vérifié côté JS :
+  // simplification assumée pour une rangée d'accueil, pas de pagination temps réel ici.
+  const { data } = await supabase
+    .from("residences")
+    .select("id, name, city, neighborhood, image_url, manager_id")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (!data || data.length === 0) return [];
+
+  const managerIds = [...new Set(data.map((r) => r.manager_id))];
+  const { data: managers } = await supabase.from("profiles").select("id, verification").in("id", managerIds);
+  const verifiedIds = new Set((managers ?? []).filter((m) => m.verification === "verifie").map((m) => m.id));
+
+  const filtered = data.filter((r) => verifiedIds.has(r.manager_id)).slice(0, limit);
+
+  const counts = await Promise.all(
+    filtered.map((r) =>
+      supabase.from("listings").select("*", { count: "exact", head: true }).eq("residence_id", r.id).eq("status", "publiee")
+    )
+  );
+
+  return filtered.map((r, i) => ({
+    id: r.id,
+    name: r.name,
+    location: [r.neighborhood, r.city].filter(Boolean).join(", "),
+    imageUrl: r.image_url,
+    managerVerified: true,
+    availableCount: counts[i].count ?? 0,
+  }));
 }

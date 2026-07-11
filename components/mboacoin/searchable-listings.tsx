@@ -4,11 +4,13 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { ListingCardCompact } from "@/components/mboacoin/listing-card-compact";
 import { ListingRow } from "@/components/mboacoin/listing-row";
+import { ResidenceRow } from "@/components/mboacoin/residence-row";
+import { ResidenceCardCompact, type ResidenceSearchResult } from "@/components/mboacoin/residence-card-compact";
 import { Icon } from "@/components/mboacoin/icon";
 import type { Listing } from "@/components/mboacoin/listing-card";
-import { searchListings } from "@/lib/search";
+import { searchListings, searchResidences } from "@/lib/search";
 import { getMyFavoriteIds } from "@/lib/favorites";
-import { getVerifiedListings, getListingsByCity } from "@/lib/home-sections";
+import { getVerifiedListings, getListingsByCity, getVerifiedResidences } from "@/lib/home-sections";
 import { FiltersSheet, EMPTY_FILTERS, type Filters } from "@/components/mboacoin/filters-sheet";
 
 const SESSION_KEY = "mboacoin-search-filters";
@@ -45,6 +47,16 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
   // Rangées horizontales de l'accueil
   const [verified, setVerified] = useState<Listing[]>([]);
   const [cityListings, setCityListings] = useState<Listing[]>([]);
+  const [residencesHome, setResidencesHome] = useState<ResidenceSearchResult[]>([]);
+
+  // Bascule Logements / Résidences
+  const [searchTarget, setSearchTarget] = useState<"logements" | "residences">("logements");
+  const [residenceResults, setResidenceResults] = useState<ResidenceSearchResult[]>([]);
+  const [residenceTotal, setResidenceTotal] = useState(0);
+  const [residenceLoading, setResidenceLoading] = useState(true);
+  const [residenceLoadingMore, setResidenceLoadingMore] = useState(false);
+  const residenceSentinelRef = useRef<HTMLDivElement | null>(null);
+  const residenceLoadingMoreRef = useRef(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restored = useRef(false);
@@ -72,6 +84,11 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
     })();
   }, [userCity]);
 
+  // Rangée d'accueil : résidences dont le gestionnaire est vérifié
+  useEffect(() => {
+    getVerifiedResidences(10).then(setResidencesHome);
+  }, []);
+
   // Restaurer la session
   useEffect(() => {
     try {
@@ -81,6 +98,7 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
         setKeywords(parsed.keywords ?? "");
         setFilters({ ...EMPTY_FILTERS, ...(parsed.filters ?? {}) });
         setSort(parsed.sort ?? "recent");
+        setSearchTarget(parsed.searchTarget === "residences" ? "residences" : "logements");
       }
     } catch {
       // ignore
@@ -92,11 +110,11 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
   useEffect(() => {
     if (!restored.current) return;
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ keywords, filters, sort }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ keywords, filters, sort, searchTarget }));
     } catch {
       // ignore
     }
-  }, [keywords, filters, sort]);
+  }, [keywords, filters, sort, searchTarget]);
 
   const buildCriteria = useCallback(
     (kw: string, f: Filters, s: Sort, offset: number) => ({
@@ -138,6 +156,25 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
     loadingMoreRef.current = false;
   }, [buildCriteria, keywords, filters, sort, listings.length, total]);
 
+  const runResidenceSearch = useCallback(async (kw: string) => {
+    setResidenceLoading(true);
+    const result = await searchResidences({ keywords: kw, offset: 0, limit: PAGE_SIZE });
+    setResidenceResults(result.residences);
+    setResidenceTotal(result.total);
+    setResidenceLoading(false);
+  }, []);
+
+  const loadMoreResidences = useCallback(async () => {
+    if (residenceLoadingMoreRef.current) return;
+    if (residenceResults.length >= residenceTotal) return;
+    residenceLoadingMoreRef.current = true;
+    setResidenceLoadingMore(true);
+    const result = await searchResidences({ keywords, offset: residenceResults.length, limit: PAGE_SIZE });
+    setResidenceResults((prev) => [...prev, ...result.residences]);
+    setResidenceLoadingMore(false);
+    residenceLoadingMoreRef.current = false;
+  }, [keywords, residenceResults.length, residenceTotal]);
+
   // Charger/recharger la liste : que ce soit en recherche OU en accueil (Toutes les annonces),
   // on utilise searchListings. La différence est juste les critères (kw/filtres ou vides).
   useEffect(() => {
@@ -146,15 +183,16 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, sort, restored.current]);
 
-  // Relancer la recherche quand les mots-clés changent (frappe OU programmation)
+  // Relancer la recherche quand les mots-clés (ou la cible logements/résidences) changent
   useEffect(() => {
     if (!restored.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      runSearch(keywords, filters, sort);
+      if (searchTarget === "residences") runResidenceSearch(keywords);
+      else runSearch(keywords, filters, sort);
     }, 300);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keywords]);
+  }, [keywords, searchTarget]);
 
   function onKeywordsChange(value: string) {
     setKeywords(value);
@@ -173,6 +211,20 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMore, loading]);
+
+  // Défilement infini pour la liste des résidences
+  useEffect(() => {
+    const sentinel = residenceSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !residenceLoading) loadMoreResidences();
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMoreResidences, residenceLoading]);
 
   // Bloc de grille (résultats), réutilisé dans les deux modes
   const grid = (
@@ -249,21 +301,83 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
           <input
             value={keywords}
             onChange={(e) => onKeywordsChange(e.target.value)}
-            placeholder="Ville, quartier, mot-clé..."
+            placeholder={
+              searchTarget === "residences" ? "Nom de résidence, ville, quartier..." : "Ville, quartier, mot-clé..."
+            }
             className="w-full bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
           />
-          <button aria-label="Filtres" onClick={() => setSheetOpen(true)} className="relative text-primary">
-            <SlidersHorizontal className="size-5" strokeWidth={2.25} />
-            {activeCount > 0 && (
-              <span className="absolute -right-2 -top-2 grid size-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                {activeCount}
-              </span>
-            )}
-          </button>
+          {searchTarget === "logements" && (
+            <button aria-label="Filtres" onClick={() => setSheetOpen(true)} className="relative text-primary">
+              <SlidersHorizontal className="size-5" strokeWidth={2.25} />
+              {activeCount > 0 && (
+                <span className="absolute -right-2 -top-2 grid size-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {activeCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {isSearching ? (
+      {/* Bascule Logements / Résidences */}
+      <div className="flex gap-2 px-5 pb-4">
+        <button
+          type="button"
+          onClick={() => setSearchTarget("logements")}
+          className={
+            searchTarget === "logements"
+              ? "rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+              : "rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
+          }
+        >
+          Logements
+        </button>
+        <button
+          type="button"
+          onClick={() => setSearchTarget("residences")}
+          className={
+            searchTarget === "residences"
+              ? "rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
+              : "rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground"
+          }
+        >
+          Résidences
+        </button>
+      </div>
+
+      {searchTarget === "residences" ? (
+        /* ===== MODE RÉSIDENCES ===== */
+        <div className="space-y-4 px-5 pb-8">
+          <p className="text-sm font-bold">
+            {residenceLoading ? "..." : `${residenceTotal} résidence${residenceTotal > 1 ? "s" : ""}`}
+          </p>
+          {residenceLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Chargement...</p>
+          ) : residenceResults.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border p-10 text-center">
+              <p className="text-sm font-bold">Aucune résidence trouvée</p>
+              <p className="text-sm text-muted-foreground">Essayez d&apos;élargir votre recherche.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                {residenceResults.map((r) => (
+                  <ResidenceCardCompact key={r.id} residence={r} />
+                ))}
+              </div>
+              {residenceResults.length < residenceTotal && (
+                <div ref={residenceSentinelRef} className="py-4 text-center">
+                  {residenceLoadingMore ? (
+                    <p className="text-sm text-muted-foreground">Chargement...</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Faites défiler pour voir plus</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      ) : isSearching ? (
         /* ===== MODE RECHERCHE ===== */
         <div className="space-y-4 px-5 pb-8">
           {listHeader("")}
@@ -293,6 +407,16 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
               }}
             />
           )}
+
+          <ResidenceRow
+            title="Nos résidences"
+            residences={residencesHome}
+            icon={<Icon name="location_city" size={18} className="text-accent" />}
+            onSeeAll={() => {
+              setSearchTarget("residences");
+              setKeywords("");
+            }}
+          />
 
           {/* Toutes les annonces : catalogue triable + défilement infini */}
           <section className="space-y-3 px-5">
