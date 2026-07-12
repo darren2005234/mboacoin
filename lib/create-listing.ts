@@ -10,8 +10,8 @@ export interface NewListingInput {
   residenceId: string | null;
   bedrooms: number;
   bathrooms: number;
-  advanceMonths: number;
-  depositMonths: number;
+  advanceAmount: number | null;
+  depositAmount: number | null;
   furnishing: string;
   water: string | null;
   electricity: string | null;
@@ -92,8 +92,8 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       residence_id: input.residenceId,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms || null,
-      advance_months: input.advanceMonths,
-      deposit_months: input.depositMonths,
+      advance_amount: input.advanceAmount,
+      deposit_amount: input.depositAmount,
       furnishing: input.furnishing,
       water: input.water,
       electricity: input.electricity,

@@ -243,8 +243,8 @@ function restoreDraft() {
       bathrooms: Number(bathrooms) || 0,
       rooms: Number(rooms) || null,
       area: Number(area) || null,
-      advanceMonths: Number(advance) || 1,
-      depositMonths: Number(deposit) || 1,
+      advanceAmount: advance ? Number(advance) : null,
+      depositAmount: deposit ? Number(deposit) : null,
       furnishing,
       water: water || null,
       electricity: electricity || null,
@@ -510,24 +510,24 @@ function restoreDraft() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="advance" className="field-label">Avance (mois)</label>
+            <label htmlFor="advance" className="field-label">Avance (FCFA)</label>
             <input
               id="advance"
               type="number"
               value={advance}
               onChange={(e) => setAdvance(e.target.value)}
-              placeholder="3"
+              placeholder="150000"
               className={inputCls}
             />
           </div>
           <div>
-            <label htmlFor="deposit" className="field-label">Caution (mois)</label>
+            <label htmlFor="deposit" className="field-label">Caution (FCFA)</label>
             <input
               id="deposit"
               type="number"
               value={deposit}
               onChange={(e) => setDeposit(e.target.value)}
-              placeholder="2"
+              placeholder="300000"
               className={inputCls}
             />
           </div>

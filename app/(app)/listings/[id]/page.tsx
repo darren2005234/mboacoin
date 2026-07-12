@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MessageSquare, CalendarDays } from "lucide-react";
 import { getListingById } from "@/lib/listings";
+import { formatFCFA } from "@/lib/utils";
 import { Price } from "@/components/mboacoin/price";
 import { TrustSeal } from "@/components/mboacoin/trust-seal";
 import { Button } from "@/components/ui/button";
@@ -134,18 +135,18 @@ export default async function ListingDetailPage({
         </div>
 
         {/* Conditions financières : affichées seulement si renseignées */}
-        {(listing.advanceMonths || listing.depositMonths) && (
+        {(listing.advanceAmount || listing.depositAmount) && (
           <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-secondary p-3 text-center">
             <div>
               <div className="text-xs font-medium text-muted-foreground">Avance</div>
               <div className="font-mono text-base font-bold">
-                {listing.advanceMonths ?? "—"} mois
+                {listing.advanceAmount != null ? `${formatFCFA(listing.advanceAmount)} FCFA` : "—"}
               </div>
             </div>
             <div className="border-l border-border">
               <div className="text-xs font-medium text-muted-foreground">Caution</div>
               <div className="font-mono text-base font-bold">
-                {listing.depositMonths ?? "—"} mois
+                {listing.depositAmount != null ? `${formatFCFA(listing.depositAmount)} FCFA` : "—"}
               </div>
             </div>
           </div>

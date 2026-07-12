@@ -96,8 +96,8 @@ export default function EditListingPage({
       setPricePeriod(data.pricePeriod ?? "mensuel");
       setBedrooms(data.bedrooms != null ? String(data.bedrooms) : "");
       setBathrooms(data.bathrooms != null ? String(data.bathrooms) : "");
-      setAdvance(data.advanceMonths != null ? String(data.advanceMonths) : "");
-      setDeposit(data.depositMonths != null ? String(data.depositMonths) : "");
+      setAdvance(data.advanceAmount != null ? String(data.advanceAmount) : "");
+      setDeposit(data.depositAmount != null ? String(data.depositAmount) : "");
       setFurnishing(data.furnishing);
       setWater(data.water ?? "");
       setElectricity(data.electricity ?? "");
@@ -128,8 +128,8 @@ export default function EditListingPage({
       residenceId: residenceId || null,
       bedrooms: Number(bedrooms) || 0,
       bathrooms: Number(bathrooms) || 0,
-      advanceMonths: Number(advance) || 1,
-      depositMonths: Number(deposit) || 1,
+      advanceAmount: advance ? Number(advance) : null,
+      depositAmount: deposit ? Number(deposit) : null,
       furnishing,
       water: water || null,
       electricity: electricity || null,
@@ -271,11 +271,11 @@ export default function EditListingPage({
           </div>
 
           <div>
-            <label className="field-label">Avance</label>
+            <label className="field-label">Avance (FCFA)</label>
             <input type="number" value={advance} onChange={(e) => setAdvance(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="field-label">Caution</label>
+            <label className="field-label">Caution (FCFA)</label>
             <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} />
           </div>
         </div>

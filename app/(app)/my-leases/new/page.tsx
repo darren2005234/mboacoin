@@ -37,6 +37,8 @@ export default function NewLeasePage() {
         setListingId(data[0].id);
         setPaymentPeriod(data[0].pricePeriod);
         setRentAmount(String(data[0].price));
+        if (data[0].depositAmount != null) setDepositAmount(String(data[0].depositAmount));
+        if (data[0].advanceAmount != null) setAdvanceAmount(String(data[0].advanceAmount));
       }
     });
   }, []);
@@ -47,6 +49,12 @@ export default function NewLeasePage() {
     if (listing) {
       setPaymentPeriod(listing.pricePeriod);
       setRentAmount((prev) => prev || String(listing.price));
+      if (listing.depositAmount != null) {
+        setDepositAmount((prev) => prev || String(listing.depositAmount));
+      }
+      if (listing.advanceAmount != null) {
+        setAdvanceAmount((prev) => prev || String(listing.advanceAmount));
+      }
     }
   }
 

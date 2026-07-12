@@ -8,6 +8,8 @@ export interface LeasableListing {
   price: number;
   pricePeriod: string;
   image: string;
+  depositAmount: number | null;
+  advanceAmount: number | null;
 }
 
 /** Logements de l'utilisateur connecté éligibles à un nouveau bail (publiés, donc pas déjà loués). */
@@ -20,7 +22,7 @@ export async function getMyLeasableListings(): Promise<LeasableListing[]> {
 
   const { data, error } = await supabase
     .from("listings")
-    .select("id, title, city, neighborhood, price, price_period, image_url")
+    .select("id, title, city, neighborhood, price, price_period, image_url, deposit_amount, advance_amount")
     .eq("owner_id", user.id)
     .eq("status", "publiee")
     .order("created_at", { ascending: false });
@@ -35,6 +37,8 @@ export async function getMyLeasableListings(): Promise<LeasableListing[]> {
     price: row.price,
     pricePeriod: row.price_period,
     image: row.image_url ?? "/img/listings/demo-1.jpg",
+    depositAmount: row.deposit_amount ?? null,
+    advanceAmount: row.advance_amount ?? null,
   }));
 }
 

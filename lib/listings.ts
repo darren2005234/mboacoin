@@ -46,7 +46,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_months, deposit_months, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone, residence_id, price_period, residence:residences(name, image_url, city, neighborhood)"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_amount, deposit_amount, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone, residence_id, price_period, residence:residences(name, image_url, city, neighborhood)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -76,8 +76,8 @@ export async function getListingById(id: string) {
     area: data.area ?? null,
     availableFrom: data.available_from ?? null,
     reference: (data as { reference: string }).reference,
-    advanceMonths: data.advance_months ?? null,
-    depositMonths: data.deposit_months ?? null,
+    advanceAmount: data.advance_amount ?? null,
+    depositAmount: data.deposit_amount ?? null,
     furnishing: (data.furnishing as string | null) ?? null,
     water: (data.water as string | null) ?? null,
     electricity: (data.electricity as string | null) ?? null,

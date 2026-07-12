@@ -8,8 +8,8 @@ export interface EditableListing {
   price: number;
   bedrooms: number | null;
   bathrooms: number | null;
-  advanceMonths: number | null;
-  depositMonths: number | null;
+  advanceAmount: number | null;
+  depositAmount: number | null;
   furnishing: string;
   water: string | null;
   electricity: string | null;
@@ -39,7 +39,7 @@ export async function getListingForEdit(
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_months, deposit_months, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period"
+      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_amount, deposit_amount, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period"
     )
     .eq("id", listingId)
     .maybeSingle();
@@ -55,8 +55,8 @@ export async function getListingForEdit(
     price: data.price,
     bedrooms: data.bedrooms,
     bathrooms: data.bathrooms,
-    advanceMonths: data.advance_months,
-    depositMonths: data.deposit_months,
+    advanceAmount: data.advance_amount,
+    depositAmount: data.deposit_amount,
     furnishing: data.furnishing,
     water: data.water,
     electricity: data.electricity,
@@ -84,8 +84,8 @@ export interface UpdateListingInput {
   residenceId: string | null;
   bedrooms: number;
   bathrooms: number;
-  advanceMonths: number;
-  depositMonths: number;
+  advanceAmount: number | null;
+  depositAmount: number | null;
   furnishing: string;
   water: string | null;
   electricity: string | null;
@@ -136,8 +136,8 @@ export async function updateListing(
       residence_id: input.residenceId,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms || null,
-      advance_months: input.advanceMonths,
-      deposit_months: input.depositMonths,
+      advance_amount: input.advanceAmount,
+      deposit_amount: input.depositAmount,
       furnishing: input.furnishing,
       water: input.water,
       electricity: input.electricity,
