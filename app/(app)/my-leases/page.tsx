@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Price } from "@/components/mboacoin/price";
 import { Icon } from "@/components/mboacoin/icon";
+import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
 import { priceSuffixFor } from "@/lib/price-period";
 import { getMyLeases, type MyLease } from "@/lib/leases";
 import { getLeasesLateStatus } from "@/lib/lease-payments";
@@ -15,6 +16,9 @@ import { nextPaymentDueDate, daysUntil } from "@/lib/lease-schedule";
 
 export default function MyLeasesPage() {
   const router = useRouter();
+  const [optIn] = useState<string | null>(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("opt_in") : null
+  );
   const [leases, setLeases] = useState<MyLease[]>([]);
   const [lateStatus, setLateStatus] = useState<Record<string, boolean>>({});
   const [newRequests, setNewRequests] = useState(0);
@@ -33,6 +37,8 @@ export default function MyLeasesPage() {
   return (
     <div className="flex flex-col">
       <ScreenHeader title="Mes baux" />
+
+      {optIn === "lease_created" && <PushOptInCard context="lease_created" />}
 
       <div className="flex gap-2 px-5 pb-4">
         <button

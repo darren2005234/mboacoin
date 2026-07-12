@@ -98,7 +98,7 @@ export default function NewLeasePage() {
       setLoading(false);
       return;
     }
-    router.push("/my-leases");
+    router.push("/my-leases?opt_in=lease_created");
   }
 
   if (!loadingListings && listings.length === 0) {

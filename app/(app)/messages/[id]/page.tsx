@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Avatar } from "@/components/mboacoin/avatar";
+import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -249,6 +250,8 @@ export default function ConversationPage({
         )}
         <div ref={bottomRef} />
       </div>
+
+      {messages.length === 1 && <PushOptInCard context="first_message" />}
 
       {/* Saisie */}
       <div className="flex items-center gap-2 border-t border-border p-3">

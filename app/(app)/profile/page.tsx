@@ -62,7 +62,7 @@ export default async function ProfilePage() {
         {(profile.accountType === "agence" || profile.accountType === "residence") && (
           <MenuRow icon="query_stats" label="Statistiques" href="/analytics" />
         )}
-        <MenuRow icon="settings" label="Paramètres" />
+        <MenuRow icon="settings" label="Paramètres" href="/profile/settings" />
         <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
         <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
         {profile.role === "admin" && (

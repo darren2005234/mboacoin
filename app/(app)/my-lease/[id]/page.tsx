@@ -10,6 +10,7 @@ import { priceSuffixFor } from "@/lib/price-period";
 import { nextPaymentDueDate, generateDueDates, dueDateForPeriod } from "@/lib/lease-schedule";
 import { createClient } from "@/lib/supabase/server";
 import { TenantLeaseActions } from "@/components/mboacoin/tenant-lease-actions";
+import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
 
 interface LeaseDetailRow {
   id: string;
@@ -27,8 +28,15 @@ interface LeaseDetailRow {
   landlord: { full_name: string | null; avatar_url: string | null; verification: string } | { full_name: string | null; avatar_url: string | null; verification: string }[] | null;
 }
 
-export default async function LeaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeaseDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ opt_in?: string }>;
+}) {
   const { id } = await params;
+  const { opt_in: optIn } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -98,6 +106,8 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="flex flex-col pb-8">
       <ScreenHeader title="Ma location" />
+
+      {optIn === "lease_confirmed" && <PushOptInCard context="lease_confirmed" />}
 
       <div className="space-y-4 px-5">
         {/* Logement */}

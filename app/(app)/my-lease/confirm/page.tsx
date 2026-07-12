@@ -37,7 +37,7 @@ export default function ConfirmLeasePage() {
       setBusy(null);
       return;
     }
-    router.push(`/my-lease/${leaseId}`);
+    router.push(`/my-lease/${leaseId}?opt_in=lease_confirmed`);
   }
 
   async function onReject(leaseId: string) {
