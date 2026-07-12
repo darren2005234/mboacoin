@@ -21,7 +21,9 @@ const WEBHOOK_SECRET = Deno.env.get("PUSH_WEBHOOK_SECRET")!;
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // Types de notifications qui déclenchent un push. Cohérent avec les valeurs de
-// `notifications.type` listées dans supabase/migrations/20260712180000_notifications.sql.
+// `notifications.type` listées dans supabase/migrations/20260712180000_notifications.sql,
+// plus lease_payment_due_soon/lease_payment_late créés par la tâche planifiée
+// supabase/functions/rent-reminders (chantier NOTIFICATIONS-3).
 // Volontairement absents (changement mineur / confirmation de sa propre action /
 // purement informatif) : lease_resiliated, lease_ended, lease_amendment_accepted,
 // lease_amendment_refused, lease_payment_declared, lease_document_added,
@@ -39,6 +41,8 @@ const PUSHABLE_TYPES = new Set([
   "verification_rejected",
   "listing_verification_approved",
   "listing_verification_rejected",
+  "lease_payment_due_soon",
+  "lease_payment_late",
 ]);
 
 interface NotificationRecord {
