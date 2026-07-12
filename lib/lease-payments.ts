@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { generateDueDates } from "@/lib/lease-schedule";
+import { generateDueDates, dueDateForPeriod } from "@/lib/lease-schedule";
 
 export interface LeasePayment {
   id: string;
@@ -70,12 +70,16 @@ export async function declarePayment(
 
 export interface DueInstallment {
   period: string;
+  dueDate: string;
   paid: LeasePayment | null;
   late: boolean;
 }
 
+/** Date du jour en ISO, en heure LOCALE (pas toISOString, qui convertit en
+ * UTC et peut renvoyer la veille pour un fuseau positif en début de nuit). */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /** Planning complet d'un bail mensuel : chaque échéance, payée ou non, en retard ou non. */
@@ -90,13 +94,14 @@ export async function getLeaseSchedule(lease: {
   const paidByPeriod = new Map(payments.map((p) => [p.period, p]));
 
   const until = lease.endDate && new Date(lease.endDate) < new Date() ? new Date(lease.endDate) : new Date();
-  const dueDates = generateDueDates(lease.startDate, lease.paymentDay, lease.paymentPeriod, until);
+  const dueDates = generateDueDates(lease.startDate, lease.paymentPeriod, until);
   const today = todayIso();
 
   return dueDates
     .map((period) => {
       const paid = paidByPeriod.get(period) ?? null;
-      return { period, paid, late: !paid && period < today };
+      const dueDate = dueDateForPeriod(period, lease.paymentDay, lease.startDate);
+      return { period, dueDate, paid, late: !paid && dueDate < today };
     })
     .sort((a, b) => (a.period < b.period ? 1 : -1));
 }
@@ -116,8 +121,11 @@ export async function getLeasesLateStatus(
   const today = todayIso();
 
   for (const lease of leases) {
-    const dueDates = generateDueDates(lease.startDate, lease.paymentDay, lease.paymentPeriod);
-    result[lease.id] = dueDates.some((d) => d < today && !paidSet.has(`${lease.id}:${d}`));
+    const dueDates = generateDueDates(lease.startDate, lease.paymentPeriod);
+    result[lease.id] = dueDates.some((d) => {
+      if (paidSet.has(`${lease.id}:${d}`)) return false;
+      return dueDateForPeriod(d, lease.paymentDay, lease.startDate) < today;
+    });
   }
   return result;
 }

@@ -7,7 +7,7 @@ import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Price } from "@/components/mboacoin/price";
 import { Icon } from "@/components/mboacoin/icon";
 import { priceSuffixFor } from "@/lib/price-period";
-import { nextPaymentDueDate, generateDueDates } from "@/lib/lease-schedule";
+import { nextPaymentDueDate, generateDueDates, dueDateForPeriod } from "@/lib/lease-schedule";
 import { createClient } from "@/lib/supabase/server";
 import { TenantLeaseActions } from "@/components/mboacoin/tenant-lease-actions";
 
@@ -59,11 +59,13 @@ export default async function LeaseDetailPage({ params }: { params: Promise<{ id
     .order("period", { ascending: false });
   const payments = paymentRows ?? [];
 
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const paidPeriods = new Set(payments.map((p) => p.period));
-  const isLate = generateDueDates(row.start_date, row.payment_day, row.payment_period).some(
-    (period) => period < today && !paidPeriods.has(period)
-  );
+  const isLate = generateDueDates(row.start_date, row.payment_period).some((period) => {
+    if (paidPeriods.has(period)) return false;
+    return dueDateForPeriod(period, row.payment_day, row.start_date) < today;
+  });
 
   const { data: amendmentRow } = await supabase
     .from("lease_amendments")

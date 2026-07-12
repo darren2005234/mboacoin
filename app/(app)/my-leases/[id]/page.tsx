@@ -562,7 +562,7 @@ function InstallmentRow({
           <p className="text-xs font-semibold text-destructive">En retard</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Dû le {new Date(installment.period).toLocaleDateString("fr-FR")}
+            Dû le {new Date(installment.dueDate).toLocaleDateString("fr-FR")}
           </p>
         )}
       </div>

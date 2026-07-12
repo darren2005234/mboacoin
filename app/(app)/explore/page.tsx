@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/mboacoin/wordmark";
-import { Icon } from "@/components/mboacoin/icon";
 import { getCurrentProfile } from "@/lib/profile";
 import { SearchableListings } from "@/components/mboacoin/searchable-listings";
+import { NotificationBell } from "@/components/mboacoin/notification-bell";
 
 export default async function ExplorePage() {
   const profile = await getCurrentProfile();
@@ -16,12 +16,7 @@ export default async function ExplorePage() {
             <p className="text-sm text-muted-foreground">Bonjour,</p>
             <p className="text-lg font-extrabold">{profile.fullName ?? profile.phone}</p>
           </div>
-          <button
-            aria-label="Notifications"
-            className="grid size-11 place-items-center rounded-full bg-secondary text-foreground"
-          >
-            <Icon name="notifications" size={22} />
-          </button>
+          <NotificationBell userId={profile.id} />
         </header>
       ) : (
         <header className="space-y-4 px-5 pt-6 pb-4">
