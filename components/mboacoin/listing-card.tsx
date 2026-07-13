@@ -10,6 +10,8 @@ import { Price } from "./price";
 import { TrustSeal } from "./trust-seal";
 import { toggleFavorite } from "@/lib/favorites";
 import { Icon } from "@/components/mboacoin/icon";
+import { unavailableListingBadge } from "@/lib/listing-status";
+import { loginUrl } from "@/lib/auth-redirect";
 
 export interface Listing {
   id: string;
@@ -27,6 +29,8 @@ export interface Listing {
   propertyVerified?: boolean;
   residenceId?: string;
   residenceName?: string;
+  /** Statut réel en base (publiee, louee, suspendue...), pour un libellé honnête quand indisponible. */
+  status?: string;
 }
 
 interface ListingCardProps {
@@ -64,7 +68,7 @@ export function ListingCard({ listing, onOpen, className, initialFavorited, unav
     const result = await toggleFavorite(listing.id);
     if (result.error === "not-authenticated") {
       setFav(prev);
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (result.error) {
@@ -94,7 +98,7 @@ export function ListingCard({ listing, onOpen, className, initialFavorited, unav
         />
         {unavailable && (
           <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/80 px-4 py-1.5 text-xs font-bold text-white">
-            Louée
+            {unavailableListingBadge(listing.status ?? "")}
           </span>
         )}
         {listing.verified && !unavailable && (

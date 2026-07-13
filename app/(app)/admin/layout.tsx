@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/profile";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  await requireAdmin("/explore", "/admin");
   return <>{children}</>;
 }

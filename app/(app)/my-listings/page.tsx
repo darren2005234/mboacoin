@@ -12,9 +12,11 @@ import {
   deleteListing,
   type MyListing,
 } from "@/lib/my-listings";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function MyListingsPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [listings, setListings] = useState<MyListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -25,8 +27,13 @@ export default function MyListingsPage() {
   }
 
   useEffect(() => {
+    if (!ready) return;
     refresh();
-  }, []);
+  }, [ready]);
+
+  if (!ready) {
+    return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
+  }
 
   async function toggleRented(l: MyListing) {
     setBusy(l.id);
@@ -104,6 +111,12 @@ export default function MyListingsPage() {
                   <Icon name="delete" size={16} filled={false} /> Supprimer
                 </button>
               </div>
+              <button
+                onClick={() => router.push(`/visits?listingId=${l.id}`)}
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-secondary py-2 text-xs font-bold text-foreground"
+              >
+                <Icon name="calendar_month" size={16} filled={false} /> Demandes de visite
+              </button>
               {l.propertyVerified ? (
                 <div className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-seal-bg py-2 text-xs font-bold text-seal-text">
                   <Icon name="verified" size={16} /> Logement vérifié

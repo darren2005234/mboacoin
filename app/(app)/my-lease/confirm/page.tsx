@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
@@ -11,9 +11,13 @@ import { Price } from "@/components/mboacoin/price";
 import { Button } from "@/components/ui/button";
 import { priceSuffixFor } from "@/lib/price-period";
 import { getMyPendingLeases, confirmLease, rejectLease, type PendingLease } from "@/lib/leases";
+import { safeNext } from "@/lib/auth-redirect";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
-export default function ConfirmLeasePage() {
+function ConfirmLeaseInner() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
+  const next = safeNext(useSearchParams().get("next")) ?? "/explore";
   const [leases, setLeases] = useState<PendingLease[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -25,8 +29,9 @@ export default function ConfirmLeasePage() {
   }
 
   useEffect(() => {
+    if (!ready) return;
     refresh();
-  }, []);
+  }, [ready]);
 
   async function onConfirm(leaseId: string) {
     setError(null);
@@ -53,7 +58,7 @@ export default function ConfirmLeasePage() {
     setBusy(null);
   }
 
-  if (loading) {
+  if (!ready || loading) {
     return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
   }
 
@@ -64,7 +69,7 @@ export default function ConfirmLeasePage() {
         <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
           <p className="text-sm font-bold">Aucun bail en attente</p>
           <button
-            onClick={() => router.push("/explore")}
+            onClick={() => router.push(next)}
             className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-btn"
           >
             Retour à l&apos;accueil
@@ -131,13 +136,21 @@ export default function ConfirmLeasePage() {
         {error && <p className="text-center text-sm font-medium text-destructive">{error}</p>}
 
         <button
-          onClick={() => router.push("/explore")}
+          onClick={() => router.push(next)}
           className="w-full py-2 text-center text-sm font-semibold text-muted-foreground"
         >
           Plus tard
         </button>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmLeasePage() {
+  return (
+    <Suspense>
+      <ConfirmLeaseInner />
+    </Suspense>
   );
 }
 

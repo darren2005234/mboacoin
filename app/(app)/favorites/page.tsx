@@ -5,55 +5,43 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { ListingCard, type Listing } from "@/components/mboacoin/listing-card";
 import { getMyFavorites, getMyFavoriteIds } from "@/lib/favorites";
 import { getMyViewedListings, clearMyViewHistory } from "@/lib/listing-views";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
-
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 type Tab = "favoris" | "historique";
 
 export default function FavoritesPage() {
+  const { ready } = useRequireAuth();
   const [tab, setTab] = useState<Tab>("favoris");
   const [favorites, setFavorites] = useState<(Listing & { available: boolean })[]>([]);
   const [history, setHistory] = useState<(Listing & { available: boolean })[]>([]);
-  const [loading, setLoading] = useState(true);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [authed, setAuthed] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favSort, setFavSort] = useState<"recent" | "price_asc" | "price_desc">("recent");
 
   useEffect(() => {
+    if (!ready) return;
     (async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setAuthed(false);
-        setLoading(false);
-        return;
-      }
       setFavoriteIds(await getMyFavoriteIds());
-      setLoading(false);
     })();
-  }, []);
+  }, [ready]);
 
   useEffect(() => {
-    if (!authed) return;
+    if (!ready) return;
     (async () => {
       setFavorites(await getMyFavorites(favSort));
     })();
-  }, [favSort, authed]);
+  }, [favSort, ready]);
 
   // Charger l'historique la première fois qu'on ouvre l'onglet
   useEffect(() => {
-    if (tab === "historique" && !historyLoaded && authed) {
+    if (tab === "historique" && !historyLoaded && ready) {
       (async () => {
         setHistory(await getMyViewedListings());
         setHistoryLoaded(true);
       })();
     }
-  }, [tab, historyLoaded, authed]);
+  }, [tab, historyLoaded, ready]);
 
   async function clearHistory() {
     if (!confirm("Effacer tout votre historique de consultation ?")) return;
@@ -87,18 +75,8 @@ export default function FavoritesPage() {
         </button>
       </div>
 
-      {loading ? (
+      {!ready ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>
-      ) : !authed ? (
-        <div className="flex flex-col items-center gap-3 px-5 py-16 text-center">
-          <p className="text-sm font-bold">Connectez-vous pour voir vos annonces suivies</p>
-          <Link
-            href="/login"
-            className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-btn"
-          >
-            Se connecter
-          </Link>
-        </div>
       ) : tab === "favoris" ? (
         /* ===== ONGLET FAVORIS ===== */
         favorites.length === 0 ? (

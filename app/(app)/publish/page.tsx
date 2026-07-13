@@ -4,10 +4,11 @@ import { getCurrentProfile } from "@/lib/profile";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { PublishForm } from "@/components/mboacoin/publish-form";
+import { loginUrl } from "@/lib/auth-redirect";
 
 export default async function PublishPage() {
   const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
+  if (!profile) redirect(loginUrl("/publish"));
 
   const needsVerification = profile.accountType === "agence" || profile.accountType === "residence";
   if (needsVerification && profile.verification !== "verifie") {
@@ -33,5 +34,5 @@ export default async function PublishPage() {
     );
   }
 
-  return <PublishForm accountType={profile.accountType} />;
+  return <PublishForm accountType={profile.accountType} verified={profile.verification === "verifie"} />;
 }

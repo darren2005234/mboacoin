@@ -6,7 +6,7 @@ export default async function EditResidencePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAccountType("residence");
   const { id } = await params;
+  await requireAccountType("residence", "/profile", `/my-residences/${id}/edit`);
   return <EditResidenceForm id={id} />;
 }

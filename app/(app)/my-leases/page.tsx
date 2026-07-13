@@ -13,9 +13,11 @@ import { getMyLeases, type MyLease } from "@/lib/leases";
 import { getLeasesLateStatus } from "@/lib/lease-payments";
 import { countNewLeaseRequestsForLandlord } from "@/lib/lease-requests";
 import { nextPaymentDueDate, daysUntil } from "@/lib/lease-schedule";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function MyLeasesPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [optIn] = useState<string | null>(() =>
     typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("opt_in") : null
   );
@@ -25,6 +27,7 @@ export default function MyLeasesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     getMyLeases().then(async (data) => {
       setLeases(data);
       setLoading(false);
@@ -32,7 +35,11 @@ export default function MyLeasesPage() {
       setLateStatus(await getLeasesLateStatus(active));
     });
     countNewLeaseRequestsForLandlord().then(setNewRequests);
-  }, []);
+  }, [ready]);
+
+  if (!ready) {
+    return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
+  }
 
   return (
     <div className="flex flex-col">

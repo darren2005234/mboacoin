@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PhoneField } from "@/components/mboacoin/phone-field";
 import { Wordmark } from "@/components/mboacoin/wordmark";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/auth-redirect";
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
+  const next = safeNext(useSearchParams().get("next"));
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +25,8 @@ export default function LoginPage() {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) throw error;
-      router.push(`/verify?tel=${encodeURIComponent(phone)}`);
+      const verifyUrl = `/verify?tel=${encodeURIComponent(phone)}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
+      router.push(verifyUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Envoi impossible. Réessayez.");
       setLoading(false);
@@ -72,5 +75,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginInner />
+    </Suspense>
   );
 }

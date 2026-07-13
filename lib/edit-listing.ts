@@ -24,6 +24,8 @@ export interface EditableListing {
   floodZone: boolean;
   residenceId: string | null;
   pricePeriod: string;
+  visitFeeAmount: number;
+  ownerVerified: boolean;
 }
 
 /** Charge une annonce pour l'édition (seulement si on en est le propriétaire). */
@@ -39,13 +41,19 @@ export async function getListingForEdit(
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_amount, deposit_amount, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period"
+      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_amount, deposit_amount, visit_fee_amount, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period"
     )
     .eq("id", listingId)
     .maybeSingle();
 
   if (error || !data) return null;
   if ((data as { owner_id: string }).owner_id !== user.id) return null; // pas le propriétaire
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("verification")
+    .eq("id", user.id)
+    .maybeSingle();
 
   return {
     title: data.title,
@@ -71,6 +79,8 @@ export async function getListingForEdit(
     floodZone: data.flood_zone ?? false,
     residenceId: (data.residence_id as string | null) ?? null,
     pricePeriod: (data.price_period as string | null) ?? "mensuel",
+    visitFeeAmount: (data as { visit_fee_amount: number | null }).visit_fee_amount ?? 0,
+    ownerVerified: profile?.verification === "verifie",
   };
 }
 
@@ -99,6 +109,7 @@ export interface UpdateListingInput {
   floorNumber: number | null;
   carAccess: boolean;
   floodZone: boolean;
+  visitFeeAmount: number;
 }
 
 /** Met à jour une annonce et ajoute d'éventuelles nouvelles photos. */
@@ -111,6 +122,16 @@ export async function updateListing(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Vous devez être connecté." };
+
+  // Défense en profondeur (en plus de la RLS RESTRICTIVE sur listings) :
+  // les frais de visite sont réservés aux comptes vérifiés, plafonnés à 10 000 FCFA.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("verification")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isVerified = profile?.verification === "verifie";
+  const visitFeeAmount = isVerified ? Math.min(Math.max(input.visitFeeAmount || 0, 0), 10000) : 0;
 
   if (input.residenceId) {
     const { data: residence } = await supabase
@@ -150,10 +171,16 @@ export async function updateListing(
       floor_number: input.floorNumber,
       car_access: input.carAccess,
       flood_zone: input.floodZone,
+      visit_fee_amount: visitFeeAmount,
     })
     .eq("id", listingId);
 
-  if (error) return { error: `Mise à jour : ${error.message}` };
+  if (error) {
+    if (error.message.includes("row-level security")) {
+      return { error: "Les frais de visite sont réservés aux comptes vérifiés." };
+    }
+    return { error: `Mise à jour : ${error.message}` };
+  }
 
   // 2. Ajout des nouvelles photos (s'il y en a)
   if (input.newFiles.length > 0) {

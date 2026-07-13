@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { loginUrl } from "@/lib/auth-redirect";
 
 export interface CurrentProfile {
   id: string;
@@ -43,9 +44,13 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
  * Garde d'accès serveur : redirige si l'utilisateur n'est pas connecté ou si son
  * compte n'est pas du type requis. À appeler en tête d'un Server Component de page.
  */
-export async function requireAccountType(types: string | string[], fallback = "/profile"): Promise<CurrentProfile> {
+export async function requireAccountType(
+  types: string | string[],
+  fallback = "/profile",
+  next?: string
+): Promise<CurrentProfile> {
   const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
+  if (!profile) redirect(loginUrl(next));
   const allowed = Array.isArray(types) ? types : [types];
   if (!allowed.includes(profile.accountType)) redirect(fallback);
   return profile;
@@ -55,9 +60,9 @@ export async function requireAccountType(types: string | string[], fallback = "/
  * Garde d'accès serveur réservée aux administrateurs. Redirige avant tout rendu
  * si l'utilisateur n'est pas connecté ou si son rôle n'est pas "admin".
  */
-export async function requireAdmin(fallback = "/explore"): Promise<CurrentProfile> {
+export async function requireAdmin(fallback = "/explore", next?: string): Promise<CurrentProfile> {
   const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
+  if (!profile) redirect(loginUrl(next));
   if (profile.role !== "admin") redirect(fallback);
   return profile;
 }

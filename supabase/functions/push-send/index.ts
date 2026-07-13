@@ -23,7 +23,9 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 // Types de notifications qui déclenchent un push. Cohérent avec les valeurs de
 // `notifications.type` listées dans supabase/migrations/20260712180000_notifications.sql,
 // plus lease_payment_due_soon/lease_payment_late créés par la tâche planifiée
-// supabase/functions/rent-reminders (chantier NOTIFICATIONS-3).
+// supabase/functions/rent-reminders (chantier NOTIFICATIONS-3), plus les
+// visit_* créés par supabase/migrations/20260713100000_visits.sql (chantier
+// TRANS-1a).
 // Volontairement absents (changement mineur / confirmation de sa propre action /
 // purement informatif) : lease_resiliated, lease_ended, lease_amendment_accepted,
 // lease_amendment_refused, lease_payment_declared, lease_document_added,
@@ -43,6 +45,14 @@ const PUSHABLE_TYPES = new Set([
   "listing_verification_rejected",
   "lease_payment_due_soon",
   "lease_payment_late",
+  "visit_requested",
+  "visit_slot_proposed",
+  "visit_confirmed",
+  "visit_refused",
+  "visit_cancelled",
+  "visit_completed",
+  "visit_expired",
+  "visit_reminder",
 ]);
 
 interface NotificationRecord {

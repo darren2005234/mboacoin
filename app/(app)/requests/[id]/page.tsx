@@ -13,10 +13,12 @@ import {
   REQUEST_TYPE_LABELS,
   type LeaseRequestThread,
 } from "@/lib/lease-requests";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function LeaseRequestThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
 
   const [myId, setMyId] = useState<string | null>(null);
   const [thread, setThread] = useState<LeaseRequestThread | null>(null);
@@ -49,6 +51,7 @@ export default function LeaseRequestThreadPage({ params }: { params: Promise<{ i
   }
 
   useEffect(() => {
+    if (!ready) return;
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setMyId(data.user?.id ?? null));
 
@@ -77,7 +80,7 @@ export default function LeaseRequestThreadPage({ params }: { params: Promise<{ i
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, ready]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

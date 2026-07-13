@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { getLeaseRequests, REQUEST_TYPE_LABELS, type LeaseRequestSummary } from "@/lib/lease-requests";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function TenantLeaseRequestsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [requests, setRequests] = useState<LeaseRequestSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     getLeaseRequests(id).then((data) => {
       setRequests(data);
       setLoading(false);
     });
-  }, [id]);
+  }, [id, ready]);
 
   return (
     <div className="flex flex-col">
@@ -32,7 +35,7 @@ export default function TenantLeaseRequestsPage({ params }: { params: Promise<{ 
         </button>
       </div>
 
-      {loading ? (
+      {!ready || loading ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>
       ) : requests.length === 0 ? (
         <p className="px-5 py-16 text-center text-sm font-bold text-muted-foreground">

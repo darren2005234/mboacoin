@@ -2,11 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/auth-redirect";
 
 export async function completeProfile(formData: FormData) {
   const fullName = String(formData.get("full_name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const accountType = String(formData.get("account_type") ?? "personne_physique");
+  const next = safeNext(formData.get("next") as string | null);
 
   if (!fullName) {
     return { error: "Le nom est obligatoire." };
@@ -40,5 +42,5 @@ export async function completeProfile(formData: FormData) {
     return { error: "Aucune ligne modifiée (profil introuvable ou bloqué par la sécurité)." };
   }
 
-  redirect("/explore");
+  redirect(next ?? "/explore");
 }

@@ -100,6 +100,7 @@ export async function getMyFavorites(
         bedrooms: l.bedrooms ?? undefined,
         verified: l.property_verified ?? false,
         available: l.status === "publiee",
+        status: l.status,
         residenceId: l.residence_id ?? undefined,
         residenceName: residence?.name ?? undefined,
       };

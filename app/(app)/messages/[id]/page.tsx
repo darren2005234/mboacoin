@@ -17,6 +17,10 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Avatar } from "@/components/mboacoin/avatar";
 import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
+import { getVisitByConversation, formatVisitDateTime, type Visit } from "@/lib/visits";
+import { VisitStatusBadge } from "@/components/mboacoin/visit-status-badge";
+import { unavailableListingSentence } from "@/lib/listing-status";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -32,14 +36,17 @@ export default function ConversationPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
   type ConvInfo = Awaited<ReturnType<typeof getConversation>>;
   const [info, setInfo] = useState<ConvInfo>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [visit, setVisit] = useState<Visit | null>(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!ready) return;
     const supabase = createClient();
 
     (async () => {
@@ -50,6 +57,7 @@ export default function ConversationPage({
       }
       setInfo(conv);
       setMessages(await getMessages(id));
+      setVisit(await getVisitByConversation(id));
       await markConversationRead(id);
       setLoading(false);
     })();
@@ -108,7 +116,7 @@ export default function ConversationPage({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, router]);
+  }, [id, router, ready]);
 
   // Marque comme lu dès qu'il y a des messages reçus non lus (fiable, après mise à jour de l'état)
   useEffect(() => {
@@ -186,8 +194,10 @@ export default function ConversationPage({
             ) : (
               <p className="text-[11px] font-semibold text-pending-text">
                 {info.otherIsOwner
-                  ? "Cette annonce n'est plus disponible"
-                  : "Vous avez marqué cette annonce comme louée"}
+                  ? unavailableListingSentence(info.listing.status ?? "")
+                  : info.listing.status === "louee"
+                  ? "Vous avez marqué cette annonce comme louée"
+                  : "Cette annonce a été suspendue et n'est plus visible publiquement"}
               </p>
             )}
           </div>
@@ -196,6 +206,26 @@ export default function ConversationPage({
               {new Intl.NumberFormat("fr-FR").format(info.listing.price)} F
             </p>
           )}
+        </Link>
+      )}
+
+      {/* Encart statut de visite : reflète l'état de la visite liée à cette conversation */}
+      {visit && !["annulee", "refusee", "expiree"].includes(visit.status) && (
+        <Link
+          href={`/visits/${visit.id}`}
+          className="flex items-center gap-2.5 border-b border-border bg-accent/5 px-4 py-2.5"
+        >
+          <Icon name="calendar_month" size={18} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1 text-xs font-medium">
+            {visit.status === "confirmee" && visit.scheduledAt
+              ? `Visite confirmée pour le ${formatVisitDateTime(visit.scheduledAt)}`
+              : visit.status === "creneau_propose"
+              ? "Le bailleur a proposé d'autres créneaux de visite"
+              : visit.status === "effectuee"
+              ? "Visite effectuée"
+              : "Demande de visite en cours"}
+          </span>
+          <VisitStatusBadge status={visit.status} />
         </Link>
       )}
 

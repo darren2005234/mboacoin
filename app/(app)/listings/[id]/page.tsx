@@ -1,16 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MessageSquare, CalendarDays } from "lucide-react";
 import { getListingById } from "@/lib/listings";
 import { formatFCFA } from "@/lib/utils";
 import { Price } from "@/components/mboacoin/price";
 import { TrustSeal } from "@/components/mboacoin/trust-seal";
-import { Button } from "@/components/ui/button";
 import { Gallery } from "@/components/mboacoin/gallery";
 import { ExpandableText } from "@/components/mboacoin/expandable-text";
 import { ListingFeatures } from "@/components/mboacoin/listing-features";
 import { ContactButton } from "@/components/mboacoin/contact-button";
+import { RequestVisitButton } from "@/components/mboacoin/request-visit-button";
 import { BackButton } from "@/components/mboacoin/back-button";
 import { Avatar } from "@/components/mboacoin/avatar";
 import { ReportDialog } from "@/components/mboacoin/report-dialog";
@@ -20,6 +19,7 @@ import { countFavoritesServer } from "@/lib/favorites-server";
 import { ListingActions } from "@/components/mboacoin/listing-actions";
 import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
 import { ViewTracker } from "@/components/mboacoin/view-tracker";
+import { unavailableListingSentence } from "@/lib/listing-status";
 
 export default async function ListingDetailPage({
   params,
@@ -50,16 +50,20 @@ export default async function ListingDetailPage({
   const favoritesCount = await countFavoritesServer(listing.id);
   const isFavorited = favoriteIds.has(listing.id);
   if (!listing.available && !isTenant) {
+    const isSuspended = listing.status === "suspendue";
     if (isOwner) {
-  
       return (
         <div className="flex min-h-full flex-col items-center justify-center gap-3 px-6 py-20 text-center">
           <div className="grid size-16 place-items-center rounded-full bg-pending-bg">
-            <Icon name="task_alt" size={32} className="text-pending-text" filled={false} />
+            <Icon name={isSuspended ? "gpp_maybe" : "task_alt"} size={32} className="text-pending-text" filled={false} />
           </div>
-          <h1 className="text-lg font-extrabold">Annonce marquée comme louée</h1>
+          <h1 className="text-lg font-extrabold">
+            {isSuspended ? "Annonce suspendue" : "Annonce marquée comme louée"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Cette annonce n&apos;est plus visible publiquement. Vous pouvez la remettre en ligne ou la gérer à tout moment.
+            {isSuspended
+              ? "Cette annonce a été suspendue par la modération et n'est plus visible publiquement. Contactez le support pour plus d'informations."
+              : "Cette annonce n'est plus visible publiquement. Vous pouvez la remettre en ligne ou la gérer à tout moment."}
           </p>
           <div className="mt-2 flex flex-col gap-2">
             <Link
@@ -78,9 +82,7 @@ export default async function ListingDetailPage({
           <Icon name="do_not_disturb_on" size={32} className="text-muted-foreground" filled={false} />
         </div>
         <h1 className="text-lg font-extrabold">Annonce non disponible</h1>
-        <p className="text-sm text-muted-foreground">
-          Cette annonce a été louée ou retirée par son propriétaire.
-        </p>
+        <p className="text-sm text-muted-foreground">{unavailableListingSentence(listing.status)}</p>
         <Link
           href="/explore"
           className="mt-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-btn"
@@ -123,6 +125,14 @@ export default async function ListingDetailPage({
           )}
           <div className="pt-1">
             <Price amount={listing.price} suffix={listing.priceSuffix} size="lg" />
+          </div>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Icon name="confirmation_number" size={16} className="text-accent" />
+            {listing.visitFeeAmount > 0 ? (
+              <span>Frais de visite : {formatFCFA(listing.visitFeeAmount)} FCFA</span>
+            ) : (
+              <span>Visite gratuite</span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
@@ -248,9 +258,7 @@ export default async function ListingDetailPage({
       {!isTenant && (
         <div className="sticky bottom-0 flex gap-3 border-t border-border bg-card p-4">
           <ContactButton listingId={listing.id} ownerId={listing.ownerId} />
-          <Button size="lg" className="flex-1">
-            <CalendarDays className="size-5" /> Visiter
-          </Button>
+          <RequestVisitButton listingId={listing.id} feeAmount={listing.visitFeeAmount} />
         </div>
       )}
     </div>

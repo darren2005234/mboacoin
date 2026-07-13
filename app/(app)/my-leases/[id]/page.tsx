@@ -15,6 +15,7 @@ import { getLeaseSchedule, declarePayment, type DueInstallment } from "@/lib/lea
 import { nextPaymentDueDate, daysUntil } from "@/lib/lease-schedule";
 import { getLeaseRequests, REQUEST_TYPE_LABELS, type LeaseRequestSummary } from "@/lib/lease-requests";
 import { getLeaseDocuments, uploadLeaseContract, getContractSignedUrl } from "@/lib/lease-documents";
+import { useRequireAuth } from "@/lib/use-require-auth";
 import {
   getLeaseAmendments,
   proposeLeaseAmendment,
@@ -39,6 +40,7 @@ const END_STATUS_LABELS: Record<string, string> = {
 export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [lease, setLease] = useState<MyLease | null>(null);
   const [schedule, setSchedule] = useState<DueInstallment[]>([]);
   const [requests, setRequests] = useState<LeaseRequestSummary[]>([]);
@@ -88,9 +90,10 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
   }
 
   useEffect(() => {
+    if (!ready) return;
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, ready]);
 
   async function markPaid(period: string, paidAt: string) {
     setError(null);

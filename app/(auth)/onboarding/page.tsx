@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Suspense, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { completeProfile } from "./actions";
 import { Wordmark } from "@/components/mboacoin/wordmark";
 import { Button } from "@/components/ui/button";
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/account-types";
+import { safeNext } from "@/lib/auth-redirect";
 
-export default function OnboardingPage() {
+function OnboardingInner() {
+  const next = safeNext(useSearchParams().get("next"));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [accountType, setAccountType] = useState("personne_physique");
@@ -75,6 +78,7 @@ export default function OnboardingPage() {
               ))}
             </div>
             <input type="hidden" name="account_type" value={accountType} />
+            {next && <input type="hidden" name="next" value={next} />}
           </div>
 
           {error && <p className="text-sm font-medium text-destructive">{error}</p>}
@@ -85,5 +89,13 @@ export default function OnboardingPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingInner />
+    </Suspense>
   );
 }

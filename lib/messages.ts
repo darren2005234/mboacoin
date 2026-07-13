@@ -36,6 +36,7 @@ export async function getConversation(conversationId: string) {
       image: listing?.image_url ?? null,
       location: [listing?.neighborhood, listing?.city].filter(Boolean).join(", "),
       available: listing?.status === "publiee",
+      status: listing?.status ?? null,
     },
     other: {
       name: other?.full_name ?? "Utilisateur",

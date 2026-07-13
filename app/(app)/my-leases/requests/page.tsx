@@ -4,24 +4,27 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { getMyLandlordRequests, REQUEST_TYPE_LABELS, type LandlordLeaseRequestSummary } from "@/lib/lease-requests";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function LandlordLeaseRequestsPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [requests, setRequests] = useState<LandlordLeaseRequestSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     getMyLandlordRequests().then((data) => {
       setRequests(data);
       setLoading(false);
     });
-  }, []);
+  }, [ready]);
 
   return (
     <div className="flex flex-col">
       <ScreenHeader title="Toutes les demandes" subtitle="Toutes vos locations confondues." />
 
-      {loading ? (
+      {!ready || loading ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>
       ) : requests.length === 0 ? (
         <p className="px-5 py-16 text-center text-sm font-bold text-muted-foreground">

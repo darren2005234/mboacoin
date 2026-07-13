@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openConversation } from "@/lib/conversations";
+import { loginUrl } from "@/lib/auth-redirect";
 
 interface ContactButtonProps {
   listingId: string;
@@ -22,7 +23,7 @@ export function ContactButton({ listingId, ownerId }: ContactButtonProps) {
     const result = await openConversation(listingId, ownerId);
 
     if (result.error === "not-authenticated") {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (result.error) {

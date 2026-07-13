@@ -7,6 +7,7 @@ import { PhoneField } from "@/components/mboacoin/phone-field";
 import { Button } from "@/components/ui/button";
 import { PRICE_PERIOD_LABELS, PRICE_PERIODS } from "@/lib/price-period";
 import { getMyLeaseById, updatePendingLease, type MyLease } from "@/lib/leases";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const inputCls =
   "w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
@@ -14,6 +15,7 @@ const inputCls =
 export default function EditLeasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [lease, setLease] = useState<MyLease | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +32,7 @@ export default function EditLeasePage({ params }: { params: Promise<{ id: string
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
     getMyLeaseById(id).then((l) => {
       if (!l || l.status !== "en_attente_confirmation") {
         router.push(`/my-leases/${id}`);
@@ -48,7 +51,7 @@ export default function EditLeasePage({ params }: { params: Promise<{ id: string
       setLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, ready]);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

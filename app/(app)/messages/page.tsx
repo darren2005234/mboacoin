@@ -6,13 +6,16 @@ import Image from "next/image";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { getMyConversations, type ConversationSummary } from "@/lib/messages";
 import { createClient } from "@/lib/supabase/client";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     const supabase = createClient();
 
     async function load() {
@@ -39,7 +42,11 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [ready]);
+
+  if (!ready) {
+    return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
+  }
 
   return (
     <div className="flex flex-col">

@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Button } from "@/components/ui/button";
 import { getMyProfileForEdit, updateMyProfile } from "@/lib/edit-profile";
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/account-types";
+import { loginUrl } from "@/lib/auth-redirect";
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function EditProfilePage() {
     (async () => {
       const data = await getMyProfileForEdit();
       if (!data) {
-        router.push("/login");
+        router.push(loginUrl());
         return;
       }
       setFullName(data.fullName);

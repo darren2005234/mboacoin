@@ -7,16 +7,17 @@ import { Icon } from "@/components/mboacoin/icon";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { countUnreadConversations } from "@/lib/messages";
-
-// Onglets de gauche et de droite (le bouton Publier est au centre, à part)
-const LEFT = [
-  { href: "/explore", label: "Explorer", icon: "explore" },
-  { href: "/favorites", label: "Favoris", icon: "favorite" },
-];
+import { loginUrl } from "@/lib/auth-redirect";
 
 export function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
   const pathname = usePathname();
   const [unread, setUnread] = useState(0);
+
+  // Onglets de gauche : Explorer (public) puis Favoris (nécessite une connexion)
+  const left = [
+    { href: "/explore", label: "Explorer", icon: "explore" },
+    { href: isAuthenticated ? "/favorites" : loginUrl("/favorites"), label: "Favoris", icon: "favorite" },
+  ];
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -42,16 +43,16 @@ export function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   const lastItem = isAuthenticated
     ? { href: "/profile", label: "Profil", icon: "person" }
-    : { href: "/login", label: "Connexion", icon: "login" };
+    : { href: loginUrl("/profile"), label: "Connexion", icon: "login" };
 
   // Onglets de droite : Messages puis Profil/Connexion
   const right = [
-    { href: "/messages", label: "Messages", icon: "chat_bubble" },
+    { href: isAuthenticated ? "/messages" : loginUrl("/messages"), label: "Messages", icon: "chat_bubble" },
     lastItem,
   ];
 
-  // Publier mène à /publish si connecté, sinon vers login
-  const publishHref = isAuthenticated ? "/publish" : "/login";
+  // Publier mène à /publish si connecté, sinon vers login (avec retour vers /publish)
+  const publishHref = isAuthenticated ? "/publish" : loginUrl("/publish");
   const publishActive = pathname === "/publish";
 
   function renderTab({ href, label, icon }: { href: string; label: string; icon: string }) {
@@ -82,7 +83,7 @@ export function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
 
   return (
     <nav className="flex items-end justify-around border-t border-border bg-card px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2.5">
-      {LEFT.map(renderTab)}
+      {left.map(renderTab)}
 
       {/* Bouton Publier central, proéminent */}
       <Link

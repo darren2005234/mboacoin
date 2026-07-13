@@ -55,6 +55,7 @@ export async function getMyViewedListings(limit = 30): Promise<(Listing & { avai
         area: l.area ?? undefined,
         verified: l.property_verified ?? false,
         available: l.status === "publiee",
+        status: l.status,
       } as Listing & { available: boolean };
     })
     .filter((x): x is Listing & { available: boolean } => x !== null);

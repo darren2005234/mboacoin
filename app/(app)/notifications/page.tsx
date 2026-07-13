@@ -11,13 +11,16 @@ import {
   type Notification,
 } from "@/lib/notifications";
 import { formatRelativeDate } from "@/lib/format-date";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     const supabase = createClient();
 
     async function load() {
@@ -36,7 +39,11 @@ export default function NotificationsPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [ready]);
+
+  if (!ready) {
+    return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
+  }
 
   async function onClickNotification(n: Notification) {
     if (!n.readAt) {

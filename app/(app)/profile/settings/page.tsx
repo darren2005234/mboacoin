@@ -10,8 +10,10 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from "@/lib/push-subscriptions";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 export default function SettingsPage() {
+  const { ready } = useRequireAuth();
   const [supported, setSupported] = useState(true);
   const [denied, setDenied] = useState(false);
   const [enabled, setEnabled] = useState(false);
@@ -19,6 +21,7 @@ export default function SettingsPage() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    if (!ready) return;
     async function load() {
       if (!isPushSupported()) {
         setSupported(false);
@@ -30,7 +33,7 @@ export default function SettingsPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [ready]);
 
   async function handleToggle(next: boolean) {
     setPending(true);

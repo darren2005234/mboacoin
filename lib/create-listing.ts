@@ -25,6 +25,7 @@ export interface NewListingInput {
   floorNumber: number | null;
   carAccess: boolean;
   floodZone: boolean;
+  visitFeeAmount: number;
 }
 
 export interface CreateListingResult {
@@ -49,6 +50,11 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
   if (needsVerification && profile?.verification !== "verifie") {
     return { error: "Votre compte doit être vérifié pour publier une annonce." };
   }
+
+  // Défense en profondeur (en plus de la RLS RESTRICTIVE sur listings) :
+  // les frais de visite sont réservés aux comptes vérifiés, plafonnés à 10 000 FCFA.
+  const isVerified = profile?.verification === "verifie";
+  const visitFeeAmount = isVerified ? Math.min(Math.max(input.visitFeeAmount || 0, 0), 10000) : 0;
 
   if (input.residenceId) {
     const { data: residence } = await supabase
@@ -108,12 +114,17 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       floor_number: input.floorNumber,
       car_access: input.carAccess,
       flood_zone: input.floodZone,
-      
+      visit_fee_amount: visitFeeAmount,
     })
     .select("id")
     .single();
 
-  if (error) return { error: `Création : ${error.message}` };
+  if (error) {
+    if (error.message.includes("row-level security")) {
+      return { error: "Les frais de visite sont réservés aux comptes vérifiés." };
+    }
+    return { error: `Création : ${error.message}` };
+  }
 
   // 3. Enregistrer chaque photo dans listing_media
   if (paths.length > 0) {

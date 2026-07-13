@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { EditableAvatar } from "@/components/mboacoin/editable-avatar";
 import { createClient } from "@/lib/supabase/server";
+import { loginUrl } from "@/lib/auth-redirect";
 
 export default async function ProfilePage() {
   const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
+  if (!profile) redirect(loginUrl("/profile"));
 
   const supabase = await createClient();
   const { count: activeLeaseCount } = await supabase
@@ -54,6 +55,7 @@ export default async function ProfilePage() {
         <MenuRow icon="edit" label="Modifier mon profil" href="/profile/edit" />
         <MenuRow icon="verified_user" label="Vérifier mon identité" href="/profile/verification" />
         <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
+        <MenuRow icon="calendar_month" label="Mes visites" href="/visits" />
         <MenuRow icon="key" label="Mes baux" href="/my-leases" />
         {hasActiveLease && <MenuRow icon="home" label="Ma location" href="/my-lease" />}
         {profile.accountType === "residence" && (

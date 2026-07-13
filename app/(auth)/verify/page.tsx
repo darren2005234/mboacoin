@@ -6,11 +6,14 @@ import { ArrowLeft, MessageSquare } from "lucide-react";
 import { OtpInput } from "@/components/mboacoin/otp-input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/auth-redirect";
 
 function VerifyInner() {
   const router = useRouter();
   const params = useSearchParams();
   const tel = params.get("tel") ?? "";
+  const next = safeNext(params.get("next"));
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : "";
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +40,7 @@ function VerifyInner() {
         .maybeSingle();
 
       if (!profile?.full_name) {
-        router.push("/onboarding");
+        router.push(`/onboarding${nextQuery}`);
         return;
       }
 
@@ -47,7 +50,7 @@ function VerifyInner() {
         .eq("tenant_id", userId!)
         .eq("status", "en_attente_confirmation");
 
-      router.push(count && count > 0 ? "/my-lease/confirm" : "/explore");
+      router.push(count && count > 0 ? `/my-lease/confirm${nextQuery}` : next ?? "/explore");
     } catch {
       setError("Code invalide ou expiré. Réessayez.");
       setLoading(false);

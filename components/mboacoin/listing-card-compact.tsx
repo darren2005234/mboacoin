@@ -11,6 +11,8 @@ import { TrustSeal } from "./trust-seal";
 import { toggleFavorite } from "@/lib/favorites";
 import { Icon } from "@/components/mboacoin/icon";
 import type { Listing } from "./listing-card";
+import { unavailableListingBadge } from "@/lib/listing-status";
+import { loginUrl } from "@/lib/auth-redirect";
 
 interface Props {
   listing: Listing;
@@ -40,7 +42,7 @@ export function ListingCardCompact({ listing, initialFavorited, unavailable, siz
     const result = await toggleFavorite(listing.id);
     if (result.error === "not-authenticated") {
       setFav(prev);
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (result.error) setFav(prev);
@@ -70,7 +72,7 @@ export function ListingCardCompact({ listing, initialFavorited, unavailable, siz
         />
         {unavailable && (
           <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/80 px-3 py-1 text-[11px] font-bold text-white">
-            Louée
+            {unavailableListingBadge(listing.status ?? "")}
           </span>
         )}
         {listing.verified && !unavailable && (

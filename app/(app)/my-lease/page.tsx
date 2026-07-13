@@ -5,6 +5,7 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Price } from "@/components/mboacoin/price";
 import { priceSuffixFor } from "@/lib/price-period";
 import { createClient } from "@/lib/supabase/server";
+import { loginUrl } from "@/lib/auth-redirect";
 
 interface ActiveLeaseRow {
   id: string;
@@ -19,7 +20,7 @@ export default async function MyLeasePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(loginUrl("/my-lease"));
 
   const { data } = await supabase
     .from("leases")

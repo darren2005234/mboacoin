@@ -6,6 +6,7 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { createLeaseRequest, REQUEST_TYPES, REQUEST_TYPE_LABELS } from "@/lib/lease-requests";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const inputCls =
   "w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
@@ -15,6 +16,7 @@ const MAX_PHOTOS = 5;
 export default function NewLeaseRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
 
   const [type, setType] = useState<string>(REQUEST_TYPES[0]);
   const [subject, setSubject] = useState("");
@@ -58,6 +60,10 @@ export default function NewLeaseRequestPage({ params }: { params: Promise<{ id: 
       return;
     }
     router.push(`/requests/${result.id}`);
+  }
+
+  if (!ready) {
+    return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
   }
 
   return (

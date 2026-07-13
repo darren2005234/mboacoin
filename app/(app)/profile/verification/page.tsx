@@ -10,11 +10,13 @@ import { CameraCapture } from "@/components/mboacoin/camera-capture";
 import { ENTITY_DOCUMENT_TYPES } from "@/lib/entity-document-types";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const DOC_TYPES = ["Carte Nationale d'Identité", "Passeport", "Permis de conduire"];
 
 export default function VerificationPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [status, setStatus] = useState<string>("aucune");
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +38,7 @@ export default function VerificationPage() {
   const isEntity = accountType === "agence" || accountType === "residence";
 
   useEffect(() => {
+    if (!ready) return;
     (async () => {
       const [s, type] = await Promise.all([getMyVerificationStatus(), getMyAccountType()]);
       setStatus(s.status);
@@ -43,7 +46,7 @@ export default function VerificationPage() {
       setAccountType(type);
       setLoading(false);
     })();
-  }, []);
+  }, [ready]);
 
   function onSelfieCaptured(f: File) {
     setSelfie(f);

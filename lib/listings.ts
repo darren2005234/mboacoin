@@ -46,7 +46,7 @@ export async function getListingById(id: string) {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_amount, deposit_amount, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone, residence_id, price_period, residence:residences(name, image_url, city, neighborhood)"
+      "id, title, description, city, neighborhood, price, bedrooms, bathrooms, rooms, area, available_from, reference, advance_amount, deposit_amount, visit_fee_amount, furnishing, water, electricity, amenities, image_url, status, owner_id, owner:profiles!listings_owner_id_fkey(full_name, verification, avatar_url), media:listing_media(storage_path, position), address_description,property_verified,floor_number, car_access, flood_zone, residence_id, price_period, residence:residences(name, image_url, city, neighborhood)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -78,6 +78,7 @@ export async function getListingById(id: string) {
     reference: (data as { reference: string }).reference,
     advanceAmount: data.advance_amount ?? null,
     depositAmount: data.deposit_amount ?? null,
+    visitFeeAmount: (data.visit_fee_amount as number | null) ?? 0,
     furnishing: (data.furnishing as string | null) ?? null,
     water: (data.water as string | null) ?? null,
     electricity: (data.electricity as string | null) ?? null,
@@ -86,6 +87,7 @@ export async function getListingById(id: string) {
     ownerAvatar: owner?.avatar_url ?? null,
     verified: owner?.verification === "verifie",
     ownerId: data.owner_id,
+    status: data.status as string,
     available: data.status === "publiee",
     addressDescription: (data.address_description as string | null) ?? null,
     propertyVerified: data.property_verified ?? false,

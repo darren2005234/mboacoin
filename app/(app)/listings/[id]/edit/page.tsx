@@ -10,6 +10,7 @@ import { PROPERTY_TYPES } from "@/lib/property-types";
 import { PRICE_PERIODS, PRICE_PERIOD_LABELS } from "@/lib/price-period";
 import { getMyAccountType } from "@/lib/verification";
 import { getMyResidences, type Residence } from "@/lib/residences";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const AMENITIES = [
   "Climatisation",
@@ -30,6 +31,7 @@ export default function EditListingPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { ready } = useRequireAuth();
 
   const [loading, setLoading] = useState(true);
   const [notAllowed, setNotAllowed] = useState(false);
@@ -47,6 +49,8 @@ export default function EditListingPage({
   const [bathrooms, setBathrooms] = useState("");
   const [advance, setAdvance] = useState("");
   const [deposit, setDeposit] = useState("");
+  const [visitFee, setVisitFee] = useState("");
+  const [ownerVerified, setOwnerVerified] = useState(false);
   const [furnishing, setFurnishing] = useState("non_meuble");
   const [water, setWater] = useState("");
   const [electricity, setElectricity] = useState("");
@@ -67,15 +71,17 @@ export default function EditListingPage({
 
   // Résidences du gestionnaire, seulement pour les comptes résidence
   useEffect(() => {
+    if (!ready) return;
     getMyAccountType().then((type) => {
       setAccountType(type);
       if (type === "residence") {
         getMyResidences().then(setResidences);
       }
     });
-  }, []);
+  }, [ready]);
 
   useEffect(() => {
+    if (!ready) return;
     (async () => {
       const data = await getListingForEdit(id);
       if (!data) {
@@ -98,6 +104,8 @@ export default function EditListingPage({
       setBathrooms(data.bathrooms != null ? String(data.bathrooms) : "");
       setAdvance(data.advanceAmount != null ? String(data.advanceAmount) : "");
       setDeposit(data.depositAmount != null ? String(data.depositAmount) : "");
+      setVisitFee(data.visitFeeAmount ? String(data.visitFeeAmount) : "");
+      setOwnerVerified(data.ownerVerified);
       setFurnishing(data.furnishing);
       setWater(data.water ?? "");
       setElectricity(data.electricity ?? "");
@@ -109,7 +117,7 @@ export default function EditListingPage({
       setResidenceId(data.residenceId ?? "");
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, ready]);
 
   function toggleAmenity(a: string) {
     setAmenities((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
@@ -117,6 +125,10 @@ export default function EditListingPage({
 
   async function save() {
     setError(null);
+    if (ownerVerified && visitFee && (Number(visitFee) < 0 || Number(visitFee) > 10000)) {
+      setError("Les frais de visite doivent être compris entre 0 et 10 000 FCFA.");
+      return;
+    }
     setSaving(true);
     const result = await updateListing(id, {
       title,
@@ -130,6 +142,7 @@ export default function EditListingPage({
       bathrooms: Number(bathrooms) || 0,
       advanceAmount: advance ? Number(advance) : null,
       depositAmount: deposit ? Number(deposit) : null,
+      visitFeeAmount: ownerVerified && visitFee ? Number(visitFee) : 0,
       furnishing,
       water: water || null,
       electricity: electricity || null,
@@ -153,7 +166,7 @@ export default function EditListingPage({
     router.push(`/listings/${id}`);
   }
 
-  if (loading) {
+  if (!ready || loading) {
     return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
   }
 
@@ -279,6 +292,32 @@ export default function EditListingPage({
             <input type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} className={inputCls} />
           </div>
         </div>
+
+        <div>
+          <label className="field-label">
+            Frais de visite (FCFA) <span className="font-normal text-muted-foreground">(optionnel, max 10 000)</span>
+          </label>
+          {ownerVerified ? (
+            <input
+              type="number"
+              min={0}
+              max={10000}
+              value={visitFee}
+              onChange={(e) => setVisitFee(e.target.value)}
+              placeholder="0 = visite gratuite"
+              className={inputCls}
+            />
+          ) : (
+            <div className="rounded-xl border border-border bg-secondary/50 px-4 py-3.5 text-sm text-muted-foreground">
+              Réservé aux comptes vérifiés.{" "}
+              <a href="/profile/verification" className="font-bold text-accent underline">
+                Vérifiez votre compte
+              </a>{" "}
+              pour facturer des frais de visite.
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="field-label">Pièces</label>

@@ -6,6 +6,7 @@ import { Heart } from "lucide-react";
 import { ShareButton } from "@/components/mboacoin/share-button";
 import { toggleFavorite } from "@/lib/favorites";
 import { cn } from "@/lib/utils";
+import { loginUrl } from "@/lib/auth-redirect";
 
 interface ListingActionsProps {
   listingId: string;
@@ -31,7 +32,7 @@ export function ListingActions({ listingId, title, initialFavorited, favoritesCo
     if (result.error === "not-authenticated") {
       setFav(prev);
       setCount((c) => (prev ? c + 1 : c - 1));
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (result.error) {

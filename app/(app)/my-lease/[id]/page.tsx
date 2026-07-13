@@ -11,6 +11,7 @@ import { nextPaymentDueDate, generateDueDates, dueDateForPeriod } from "@/lib/le
 import { createClient } from "@/lib/supabase/server";
 import { TenantLeaseActions } from "@/components/mboacoin/tenant-lease-actions";
 import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
+import { loginUrl } from "@/lib/auth-redirect";
 
 interface LeaseDetailRow {
   id: string;
@@ -41,7 +42,7 @@ export default async function LeaseDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(loginUrl(`/my-lease/${id}`));
 
   const { data } = await supabase
     .from("leases")

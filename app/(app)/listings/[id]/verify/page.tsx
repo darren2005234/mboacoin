@@ -12,6 +12,7 @@ import {
   submitListingVerification,
   getVideoDuration,
 } from "@/lib/listing-verification";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const MAX_DURATION = 185; // 3 min + petite marge (secondes)
 const MAX_SIZE_MB = 50;
@@ -19,6 +20,7 @@ const MAX_SIZE_MB = 50;
 export default function VerifyListingPage() {
   const params = useParams();
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const listingId = String(params.id);
 
   const [status, setStatus] = useState("aucune");
@@ -32,13 +34,14 @@ export default function VerifyListingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!ready) return;
     (async () => {
       const s = await getListingVerifStatus(listingId);
       setStatus(s.status);
       setRejectionReason(s.rejectionReason);
       setLoading(false);
     })();
-  }, [listingId]);
+  }, [listingId, ready]);
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = e.target.files?.[0];

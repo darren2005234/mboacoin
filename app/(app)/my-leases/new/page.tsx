@@ -7,12 +7,14 @@ import { PhoneField } from "@/components/mboacoin/phone-field";
 import { Button } from "@/components/ui/button";
 import { PRICE_PERIOD_LABELS, PRICE_PERIODS } from "@/lib/price-period";
 import { getMyLeasableListings, createLease, type LeasableListing } from "@/lib/leases";
+import { useRequireAuth } from "@/lib/use-require-auth";
 
 const inputCls =
   "w-full rounded-xl border border-input bg-card px-4 py-3.5 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
 
 export default function NewLeasePage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [listings, setListings] = useState<LeasableListing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
 
@@ -30,6 +32,7 @@ export default function NewLeasePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
     getMyLeasableListings().then((data) => {
       setListings(data);
       setLoadingListings(false);
@@ -41,7 +44,7 @@ export default function NewLeasePage() {
         if (data[0].advanceAmount != null) setAdvanceAmount(String(data[0].advanceAmount));
       }
     });
-  }, []);
+  }, [ready]);
 
   function onSelectListing(id: string) {
     setListingId(id);

@@ -25,7 +25,7 @@ const AMENITIES = [
 
 const DRAFT_KEY = "mboacoin-draft-annonce";
 
-export function PublishForm({ accountType }: { accountType: string }) {
+export function PublishForm({ accountType, verified }: { accountType: string; verified: boolean }) {
   const router = useRouter();
   const isResidence = accountType === "residence";
   const [residences, setResidences] = useState<Residence[]>([]);
@@ -44,6 +44,7 @@ export function PublishForm({ accountType }: { accountType: string }) {
   const [area, setArea] = useState("");
   const [advance, setAdvance] = useState("");
   const [deposit, setDeposit] = useState("");
+  const [visitFee, setVisitFee] = useState("");
   const [furnishing, setFurnishing] = useState("non_meuble");
   const [water, setWater] = useState("");
   const [electricity, setElectricity] = useState("");
@@ -228,6 +229,10 @@ function restoreDraft() {
       setError("La description doit faire au moins 20 caractères.");
       return;
     }
+    if (verified && visitFee && (Number(visitFee) < 0 || Number(visitFee) > 10000)) {
+      setError("Les frais de visite doivent être compris entre 0 et 10 000 FCFA.");
+      return;
+    }
 
     setLoading(true);
     const result = await createListing({
@@ -245,6 +250,7 @@ function restoreDraft() {
       area: Number(area) || null,
       advanceAmount: advance ? Number(advance) : null,
       depositAmount: deposit ? Number(deposit) : null,
+      visitFeeAmount: verified && visitFee ? Number(visitFee) : 0,
       furnishing,
       water: water || null,
       electricity: electricity || null,
@@ -531,6 +537,32 @@ function restoreDraft() {
               className={inputCls}
             />
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="visitFee" className="field-label">
+            Frais de visite (FCFA) <span className="font-normal text-muted-foreground">(optionnel, max 10 000)</span>
+          </label>
+          {verified ? (
+            <input
+              id="visitFee"
+              type="number"
+              min={0}
+              max={10000}
+              value={visitFee}
+              onChange={(e) => setVisitFee(e.target.value)}
+              placeholder="0 = visite gratuite"
+              className={inputCls}
+            />
+          ) : (
+            <div className="rounded-xl border border-border bg-secondary/50 px-4 py-3.5 text-sm text-muted-foreground">
+              Réservé aux comptes vérifiés.{" "}
+              <a href="/profile/verification" className="font-bold text-accent underline">
+                Vérifiez votre compte
+              </a>{" "}
+              pour facturer des frais de visite.
+            </div>
+          )}
         </div>
 
         {/* Ameublement */}

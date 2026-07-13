@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { reportListing, reportUser } from "@/lib/reports";
+import { loginUrl } from "@/lib/auth-redirect";
 
 const LISTING_REASONS = [
   "Annonce frauduleuse / arnaque",
@@ -55,7 +56,7 @@ export function ReportDialog({ targetType, targetId, label = "Signaler" }: Repor
         : await reportUser(targetId, reason, details);
 
     if (result.error === "not-authenticated") {
-      router.push("/login");
+      router.push(loginUrl());
       return;
     }
     if (result.error) {
