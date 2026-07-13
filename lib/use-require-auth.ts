@@ -10,6 +10,14 @@ import { loginUrl } from "@/lib/auth-redirect";
  * actuelle une fois connecté) si personne n'est connecté. Tant que la
  * vérification est en cours ou que la redirection se prépare, `ready` reste
  * false — n'affichez le contenu de la page qu'une fois `ready` true.
+ *
+ * On écoute onAuthStateChange plutôt que d'appeler getUser() une seule fois :
+ * un getUser() isolé juste après la création du client peut gagner la course
+ * contre l'initialisation interne de la session (lue depuis les cookies), et
+ * renvoyer un faux "non connecté" qui déclenche une redirection abusive vers
+ * /login même pour un utilisateur bien connecté. onAuthStateChange est piloté
+ * par le client lui-même : il ne notifie qu'une fois la session réellement
+ * résolue, et se redéclenche si elle change ensuite (refresh de token...).
  */
 export function useRequireAuth(): { ready: boolean; userId: string | null } {
   const router = useRouter();
@@ -19,18 +27,25 @@ export function useRequireAuth(): { ready: boolean; userId: string | null } {
   });
 
   useEffect(() => {
-    let cancelled = false;
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (cancelled) return;
-      if (!user) {
-        router.replace(loginUrl());
+    let redirected = false;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        redirected = false;
+        setState({ ready: true, userId: session.user.id });
         return;
       }
-      setState({ ready: true, userId: user.id });
+      if (!redirected) {
+        redirected = true;
+        router.replace(loginUrl());
+      }
     });
+
     return () => {
-      cancelled = true;
+      subscription.unsubscribe();
     };
   }, [router]);
 
