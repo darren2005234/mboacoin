@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
 import { priceSuffixFor } from "@/lib/price-period";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface MyListing extends Listing {
   status: string;
@@ -49,7 +50,7 @@ export async function updateListingStatus(listingId: string, status: string) {
     .from("listings")
     .update({ status })
     .eq("id", listingId);
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de changer le statut de l'annonce. Réessayez.") };
   return { success: true };
 }
 
@@ -57,6 +58,6 @@ export async function updateListingStatus(listingId: string, status: string) {
 export async function deleteListing(listingId: string) {
   const supabase = createClient();
   const { error } = await supabase.from("listings").delete().eq("id", listingId);
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de supprimer cette annonce. Réessayez.") };
   return { success: true };
 }

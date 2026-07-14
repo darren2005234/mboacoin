@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface EditableListing {
   title: string;
@@ -179,7 +180,7 @@ export async function updateListing(
     if (error.message.includes("row-level security")) {
       return { error: "Les frais de visite sont réservés aux comptes vérifiés." };
     }
-    return { error: `Mise à jour : ${error.message}` };
+    return { error: friendlyErrorMessage(error, "Impossible de mettre à jour l'annonce. Réessayez.") };
   }
 
   // 2. Ajout des nouvelles photos (s'il y en a)

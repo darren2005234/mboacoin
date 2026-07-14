@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 /**
  * Ouvre la conversation entre l'utilisateur courant (locataire) et le bailleur
@@ -40,6 +41,6 @@ export async function openConversation(
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible d'ouvrir cette conversation. Réessayez.") };
   return { id: data.id };
 }

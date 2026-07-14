@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface EditableProfile {
   fullName: string;
@@ -64,6 +65,6 @@ export async function updateMyProfile(input: {
     })
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible d'enregistrer le profil. Réessayez.") };
   return { success: true };
 }

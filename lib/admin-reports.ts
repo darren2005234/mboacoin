@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { requireAdminClient } from "@/lib/admin-guard";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface PendingReport {
   id: string;
@@ -80,7 +81,7 @@ export async function markReportHandled(reportId: string): Promise<{ success?: b
 
   const supabase = createClient();
   const { error } = await supabase.from("reports").update({ status: "traite" }).eq("id", reportId);
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de traiter ce signalement. Réessayez.") };
   return { success: true };
 }
 
@@ -91,7 +92,7 @@ export async function dismissReport(reportId: string): Promise<{ success?: boole
 
   const supabase = createClient();
   const { error } = await supabase.from("reports").update({ status: "rejete" }).eq("id", reportId);
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de rejeter ce signalement. Réessayez.") };
   return { success: true };
 }
 
@@ -106,10 +107,10 @@ export async function suspendReportedListing(
   const supabase = createClient();
 
   const { error: e1 } = await supabase.from("listings").update({ status: "suspendue" }).eq("id", listingId);
-  if (e1) return { error: e1.message };
+  if (e1) return { error: friendlyErrorMessage(e1, "Impossible de suspendre cette annonce. Réessayez.") };
 
   const { error: e2 } = await supabase.from("reports").update({ status: "traite" }).eq("id", reportId);
-  if (e2) return { error: e2.message };
+  if (e2) return { error: friendlyErrorMessage(e2, "Impossible de traiter ce signalement. Réessayez.") };
 
   return { success: true };
 }

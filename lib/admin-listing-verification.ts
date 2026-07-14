@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { requireAdminClient } from "@/lib/admin-guard";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface PendingListingVerif {
   id: string;
@@ -8,6 +9,8 @@ export interface PendingListingVerif {
   listingTitle: string;
   ownerName: string;
   videoUrl: string;
+  /** true si la vidéo a été purgée (loi n°2024/017) — jamais le cas pour une demande "en_attente", gardé par précaution. */
+  videoPurged: boolean;
   createdAt: string;
 }
 
@@ -44,10 +47,17 @@ export async function getPendingListingVerifs(): Promise<PendingListingVerif[]> 
   for (const row of data) {
     const listing = Array.isArray(row.listings) ? row.listings[0] : row.listings;
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    // URL signée temporaire pour visionner la vidéo privée (1h)
-    const { data: signed } = await supabase.storage
-      .from("property-videos")
-      .createSignedUrl(row.video_path, 3600);
+
+    // Garde de conformité (loi n°2024/017) : une vidéo purgée n'a plus de
+    // storage_path — ne jamais appeler createSignedUrl sur un chemin absent.
+    let videoUrl = "";
+    const videoPurged = !row.video_path;
+    if (row.video_path) {
+      const { data: signed } = await supabase.storage
+        .from("property-videos")
+        .createSignedUrl(row.video_path, 3600);
+      videoUrl = signed?.signedUrl ?? "";
+    }
 
     results.push({
       id: row.id,
@@ -55,7 +65,8 @@ export async function getPendingListingVerifs(): Promise<PendingListingVerif[]> 
       ownerId: row.owner_id,
       listingTitle: listing?.title ?? "Annonce",
       ownerName: profile?.full_name ?? "Bailleur",
-      videoUrl: signed?.signedUrl ?? "",
+      videoUrl,
+      videoPurged,
       createdAt: row.created_at,
     });
   }
@@ -72,13 +83,13 @@ export async function approveListingVerif(verifId: string, listingId: string) {
     .from("listing_verifications")
     .update({ status: "validee", reviewed_at: new Date().toISOString() })
     .eq("id", verifId);
-  if (e1) return { error: e1.message };
+  if (e1) return { error: friendlyErrorMessage(e1, "Impossible de valider cette vidéo. Réessayez.") };
 
   const { error: e2 } = await supabase
     .from("listings")
     .update({ property_verified: true })
     .eq("id", listingId);
-  if (e2) return { error: e2.message };
+  if (e2) return { error: friendlyErrorMessage(e2, "Impossible de valider cette vidéo. Réessayez.") };
 
   return { success: true };
 }
@@ -93,6 +104,6 @@ export async function rejectListingVerif(verifId: string, reason: string) {
     .from("listing_verifications")
     .update({ status: "rejetee", reviewed_at: new Date().toISOString(), rejection_reason: reason })
     .eq("id", verifId);
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de rejeter cette vidéo. Réessayez.") };
   return { success: true };
 }

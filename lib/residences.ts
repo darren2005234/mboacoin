@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface Residence {
   id: string;
@@ -89,7 +90,7 @@ export async function createResidence(input: NewResidenceInput): Promise<CreateR
     .select("id")
     .single();
 
-  if (error) return { error: `Création : ${error.message}` };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de créer la résidence. Réessayez.") };
   return { id: data.id };
 }
 
@@ -181,7 +182,7 @@ export async function updateResidence(
     })
     .eq("id", id);
 
-  if (error) return { error: `Mise à jour : ${error.message}` };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de mettre à jour la résidence. Réessayez.") };
   return { success: true };
 }
 
@@ -203,6 +204,6 @@ export async function deleteResidence(id: string): Promise<{ success?: boolean; 
   }
 
   const { error } = await supabase.from("residences").delete().eq("id", id);
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de supprimer la résidence. Réessayez.") };
   return { success: true };
 }

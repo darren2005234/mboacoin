@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Listing } from "@/components/mboacoin/listing-card";
 import { priceSuffixFor } from "@/lib/price-period";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 /** Ajoute ou retire une annonce des favoris. Retourne le nouvel état. */
 export async function toggleFavorite(
@@ -27,14 +28,14 @@ export async function toggleFavorite(
       .delete()
       .eq("user_id", user.id)
       .eq("listing_id", listingId);
-    if (error) return { error: error.message };
+    if (error) return { error: friendlyErrorMessage(error, "Impossible de retirer ce favori. Réessayez.") };
     return { favorited: false };
   } else {
     // Ajouter
     const { error } = await supabase
       .from("favorites")
       .insert({ user_id: user.id, listing_id: listingId });
-    if (error) return { error: error.message };
+    if (error) return { error: friendlyErrorMessage(error, "Impossible d'ajouter ce favori. Réessayez.") };
     return { favorited: true };
   }
 }

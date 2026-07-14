@@ -83,8 +83,8 @@ export default function AdminIdentityVerificationsPage() {
                   Document
                 </span>
                 {!item.documentUrl ? (
-                  <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                    Document indisponible
+                  <div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">
+                    {item.documentPurged ? "Document purgé (conformité loi n°2024/017)" : "Document indisponible"}
                   </div>
                 ) : item.isPdf ? (
 
@@ -112,39 +112,47 @@ export default function AdminIdentityVerificationsPage() {
                 )}
               </div>
               {/* Selfie en direct, pour comparer les visages */}
-              {item.selfieUrl && (
+              {(item.selfieUrl || item.selfiePurged) && (
                 <div className="border-t border-border">
                   <div className="relative h-56 bg-secondary">
-                    <button
-                      type="button"
-                      aria-label="Agrandir la photo en direct"
-                      className="absolute inset-0"
-                      onClick={() => {
-                        const images = imagesFor(item);
-                        setZoom({ images, index: images.indexOf(item.selfieUrl!) });
-                      }}
-                    >
-                      <Image src={item.selfieUrl} alt="Photo en direct" fill className="object-contain" sizes="400px" unoptimized />
-                    </button>
                     <span className="absolute left-2 top-2 z-10 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
                       Photo en direct
                     </span>
+                    {!item.selfieUrl ? (
+                      <div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">
+                        {item.selfiePurged ? "Document purgé (conformité loi n°2024/017)" : "Document indisponible"}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-label="Agrandir la photo en direct"
+                        className="absolute inset-0"
+                        onClick={() => {
+                          const images = imagesFor(item);
+                          setZoom({ images, index: images.indexOf(item.selfieUrl!) });
+                        }}
+                      >
+                        <Image src={item.selfieUrl} alt="Photo en direct" fill className="object-contain" sizes="400px" unoptimized />
+                      </button>
+                    )}
                   </div>
-                  <p className="bg-pending-bg px-3 py-2 text-xs text-pending-text">
-                    Vérifiez que le visage de la photo en direct correspond bien à celui du document.
-                  </p>
+                  {item.selfieUrl && (
+                    <p className="bg-pending-bg px-3 py-2 text-xs text-pending-text">
+                      Vérifiez que le visage de la photo en direct correspond bien à celui du document.
+                    </p>
+                  )}
                 </div>
               )}
               {/* Document d'entité (comptes agence/résidence uniquement) */}
-              {item.entityDocumentUrl && (
+              {(item.entityDocumentUrl || item.entityDocumentPurged) && (
                 <div className="border-t border-border">
                   <div className="relative h-56 bg-secondary">
                     <span className="absolute left-2 top-2 z-10 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
                       Document de l&apos;entité
                     </span>
                     {!item.entityDocumentUrl ? (
-                      <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                        Document indisponible
+                      <div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">
+                        {item.entityDocumentPurged ? "Document purgé (conformité loi n°2024/017)" : "Document indisponible"}
                       </div>
                     ) : item.entityIsPdf ? (
                       <a
@@ -182,7 +190,7 @@ export default function AdminIdentityVerificationsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold">{item.userName}</p>
-                    {item.entityDocumentUrl && (
+                    {item.entityDocumentType && (
                       <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent">
                         Compte professionnel
                       </span>

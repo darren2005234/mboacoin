@@ -255,7 +255,7 @@ export default async function ListingDetailPage({
         )}
       </div>
 
-      {!isTenant && (
+      {!isTenant && !isOwner && (
         <div className="sticky bottom-0 flex gap-3 border-t border-border bg-card p-4">
           <ContactButton listingId={listing.id} ownerId={listing.ownerId} />
           <RequestVisitButton listingId={listing.id} feeAmount={listing.visitFeeAmount} />

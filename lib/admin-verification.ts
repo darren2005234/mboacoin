@@ -7,10 +7,14 @@ export interface PendingVerification {
   userName: string;
   documentType: string | null;
   documentUrl: string;
+  /** true si le document a été purgé (loi n°2024/017) — jamais le cas pour une demande "en_attente", mais gardé par précaution si cette fonction est un jour réutilisée pour un historique. */
+  documentPurged: boolean;
   selfieUrl: string;
+  selfiePurged: boolean;
   isPdf: boolean;
   createdAt: string;
   entityDocumentUrl: string | null;
+  entityDocumentPurged: boolean;
   entityDocumentType: string | null;
   entityIsPdf: boolean;
 }
@@ -49,13 +53,24 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
   const results: PendingVerification[] = [];
   for (const row of data) {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    // URL signée du document (1h)
-    const { data: signed } = await supabase.storage
-      .from("identity-documents")
-      .createSignedUrl(row.document_path, 3600);
 
-    // URL signée du selfie (1h), si présent
+    // Garde de conformité (loi n°2024/017) : un document purgé n'a plus de
+    // storage_path — ne jamais appeler createSignedUrl sur un chemin absent,
+    // l'UI doit afficher "Document purgé" plutôt que planter ou masquer
+    // silencieusement l'absence. Voir components ci-dessous pour le libellé.
+    let documentUrl = "";
+    let isPdf = false;
+    const documentPurged = !row.document_path;
+    if (row.document_path) {
+      const { data: signed } = await supabase.storage
+        .from("identity-documents")
+        .createSignedUrl(row.document_path, 3600);
+      documentUrl = signed?.signedUrl ?? "";
+      isPdf = row.document_path.toLowerCase().endsWith(".pdf");
+    }
+
     let selfieUrl = "";
+    const selfiePurged = !row.selfie_path;
     if (row.selfie_path) {
       const { data: signedSelfie } = await supabase.storage
         .from("identity-documents")
@@ -63,13 +78,19 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
       selfieUrl = signedSelfie?.signedUrl ?? "";
     }
 
-    // URL signée du document d'entité (1h), si présent (agence/résidence)
+    // entity_document_type non nul = un document d'entité a été soumis à un
+    // moment donné ; s'il n'a plus de storage_path, c'est qu'il a été purgé
+    // (à distinguer du cas normal où aucun document d'entité n'a jamais été
+    // demandé, où entity_document_type est aussi null).
     let entityDocumentUrl: string | null = null;
+    let entityIsPdf = false;
+    const entityDocumentPurged = Boolean(row.entity_document_type) && !row.entity_document_path;
     if (row.entity_document_path) {
       const { data: signedEntity } = await supabase.storage
         .from("identity-documents")
         .createSignedUrl(row.entity_document_path, 3600);
       entityDocumentUrl = signedEntity?.signedUrl ?? "";
+      entityIsPdf = row.entity_document_path.toLowerCase().endsWith(".pdf");
     }
 
     results.push({
@@ -77,13 +98,16 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
       userId: row.user_id,
       userName: profile?.full_name ?? "Utilisateur",
       documentType: row.document_type,
-      documentUrl: signed?.signedUrl ?? "",
+      documentUrl,
+      documentPurged,
       selfieUrl,
-      isPdf: row.document_path.toLowerCase().endsWith(".pdf"),
+      selfiePurged,
+      isPdf,
       createdAt: row.created_at,
       entityDocumentUrl,
+      entityDocumentPurged,
       entityDocumentType: row.entity_document_type,
-      entityIsPdf: row.entity_document_path ? row.entity_document_path.toLowerCase().endsWith(".pdf") : false,
+      entityIsPdf,
     });
   }
   return results;

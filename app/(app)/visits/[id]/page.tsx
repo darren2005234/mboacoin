@@ -381,16 +381,22 @@ export default function VisitDetailPage({ params }: { params: Promise<{ id: stri
                 >
                   Valider le code
                 </Button>
-                {pastScheduled && !visit.noShow && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-destructive"
-                    onClick={handleNoShow}
-                    disabled={busy === "noshow"}
-                  >
-                    Signaler une absence (no-show)
-                  </Button>
+                {!visit.noShow && (
+                  pastScheduled ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-destructive"
+                      onClick={handleNoShow}
+                      disabled={busy === "noshow"}
+                    >
+                      Signaler une absence (no-show)
+                    </Button>
+                  ) : (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Signalement possible après l&apos;heure du rendez-vous ({formatVisitDateTime(visit.scheduledAt)}).
+                    </p>
+                  )
                 )}
                 {visit.noShow && (
                   <p className="text-center text-xs font-medium text-destructive">

@@ -104,13 +104,19 @@ export function SupportThread({
             className="w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
           />
           {allowAttachments && (
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="w-full text-xs"
-            />
+            <div>
+              <label className="field-label" htmlFor="support-reply-files">
+                Captures d&apos;écran (facultatif)
+              </label>
+              <input
+                id="support-reply-files"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                className="w-full text-xs"
+              />
+            </div>
           )}
           {error && <p className="text-xs font-medium text-destructive">{error}</p>}
           <Button type="submit" size="sm" disabled={!body.trim() || busy}>

@@ -70,7 +70,9 @@ export default function AdminListingVerifsPage() {
                 {item.videoUrl ? (
                   <video src={item.videoUrl} controls className="max-h-80 w-full" />
                 ) : (
-                  <div className="grid h-40 place-items-center text-sm text-white/60">Vidéo indisponible</div>
+                  <div className="grid h-40 place-items-center px-4 text-center text-sm text-white/60">
+                    {item.videoPurged ? "Vidéo purgée (conformité loi n°2024/017)" : "Vidéo indisponible"}
+                  </div>
                 )}
               </div>
               <div className="space-y-3 p-4">

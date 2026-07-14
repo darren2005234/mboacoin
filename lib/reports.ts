@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 /** Signale une annonce. */
 export async function reportListing(
@@ -24,7 +25,7 @@ export async function reportListing(
     if (error.code === "23505") {
       return { error: "Vous avez déjà signalé cette annonce." };
     }
-    return { error: error.message };
+    return { error: friendlyErrorMessage(error, "Impossible d'envoyer ce signalement. Réessayez.") };
   }
   return { success: true };
 }
@@ -52,7 +53,7 @@ export async function reportUser(
     if (error.code === "23505") {
       return { error: "Vous avez déjà signalé cet utilisateur." };
     }
-    return { error: error.message };
+    return { error: friendlyErrorMessage(error, "Impossible d'envoyer ce signalement. Réessayez.") };
   }
   return { success: true };
 }

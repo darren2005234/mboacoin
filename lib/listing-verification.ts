@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface ListingVerifStatus {
   status: "aucune" | "en_attente" | "validee" | "rejetee";
@@ -53,7 +54,7 @@ export async function submitListingVerification(
     owner_id: user.id,
     video_path: path,
   });
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible d'envoyer la vidéo de vérification. Réessayez.") };
 
   return { success: true };
 }

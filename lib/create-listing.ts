@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface NewListingInput {
   title: string;
@@ -123,7 +124,7 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
     if (error.message.includes("row-level security")) {
       return { error: "Les frais de visite sont réservés aux comptes vérifiés." };
     }
-    return { error: `Création : ${error.message}` };
+    return { error: friendlyErrorMessage(error, "Impossible de créer l'annonce. Réessayez.") };
   }
 
   // 3. Enregistrer chaque photo dans listing_media

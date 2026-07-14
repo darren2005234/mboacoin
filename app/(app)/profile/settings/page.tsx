@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
+import { Icon } from "@/components/mboacoin/icon";
 import { Switch } from "@/components/ui/switch";
 import {
   getNotificationPermission,
@@ -73,6 +75,17 @@ export default function SettingsPage() {
             onCheckedChange={handleToggle}
           />
         </div>
+
+        <Link
+          href="/profile/delete-account"
+          className="mt-4 flex items-center justify-between rounded-xl bg-secondary px-4 py-3.5 text-[15px] font-semibold text-destructive"
+        >
+          <span className="flex items-center gap-3">
+            <Icon name="delete_forever" size={22} filled={false} />
+            Supprimer mon compte
+          </span>
+          <Icon name="chevron_right" size={20} />
+        </Link>
       </div>
     </div>
   );

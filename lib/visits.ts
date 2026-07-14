@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 export interface VisitSlot {
   id: string;
@@ -127,7 +128,7 @@ export async function requestVisit(listingId: string, slots: Date[]): Promise<{ 
     p_slots: slots.map((d) => d.toISOString()),
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de demander cette visite. Réessayez.") };
   return { id: data as string };
 }
 
@@ -193,7 +194,7 @@ export async function acceptSlot(visitId: string, slotAt: string): Promise<{ err
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible d'accepter ce créneau. Réessayez.") };
   return {};
 }
 
@@ -213,7 +214,7 @@ export async function proposeCounterSlots(visitId: string, slots: Date[]): Promi
     .from("visit_slots")
     .insert(slots.map((d) => ({ visit_id: visitId, proposed_by: user.id, slot_at: d.toISOString() })));
 
-  if (insertError) return { error: insertError.message };
+  if (insertError) return { error: friendlyErrorMessage(insertError, "Impossible de proposer ces créneaux. Réessayez.") };
 
   const { error } = await supabase
     .from("visits")
@@ -222,7 +223,7 @@ export async function proposeCounterSlots(visitId: string, slots: Date[]): Promi
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de proposer ces créneaux. Réessayez.") };
   return {};
 }
 
@@ -236,7 +237,7 @@ export async function refuseVisit(visitId: string): Promise<{ error?: string }> 
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de refuser cette visite. Réessayez.") };
   return {};
 }
 
@@ -255,7 +256,7 @@ export async function cancelVisit(visitId: string): Promise<{ error?: string }> 
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible d'annuler cette visite. Réessayez.") };
   return {};
 }
 
@@ -278,7 +279,7 @@ export async function confirmVisitWithCode(
     p_code: code,
   });
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: friendlyErrorMessage(error, "Impossible de vérifier ce code. Réessayez.") };
   return { success: Boolean(data) };
 }
 
@@ -292,6 +293,6 @@ export async function reportNoShow(visitId: string): Promise<{ error?: string }>
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible de signaler cette absence. Réessayez.") };
   return {};
 }

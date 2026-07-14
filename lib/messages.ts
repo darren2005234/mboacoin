@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/supabase-error";
 
 /** Récupère les infos d'une conversation (annonce + interlocuteur). */
 /** Récupère les infos d'une conversation : annonce reliée + interlocuteur. */
@@ -90,7 +91,7 @@ export async function sendMessage(conversationId: string, body: string) {
     body: body.trim(),
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error, "Impossible d'envoyer le message. Réessayez.") };
 
   await supabase
     .from("conversations")
