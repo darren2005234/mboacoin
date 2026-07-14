@@ -5,22 +5,26 @@ import { useRouter } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Price } from "@/components/mboacoin/price";
 import { getMyLeases, type MyLease } from "@/lib/leases";
-import { daysUntil } from "@/lib/lease-schedule";
+import { daysUntil, COVERAGE_ENDING_SOON_DAYS } from "@/lib/lease-schedule";
+import { getRenewalIntentsForLeases, currentRenewalIntent, type LeaseRenewalIntent } from "@/lib/lease-renewal-intent";
 import { useRequireAuth } from "@/lib/use-require-auth";
 
-const WINDOW_DAYS = 60;
+const WINDOW_DAYS = COVERAGE_ENDING_SOON_DAYS;
 
 export default function CoverageEndingsPage() {
   const router = useRouter();
   const { ready } = useRequireAuth();
   const [leases, setLeases] = useState<MyLease[]>([]);
+  const [renewalIntents, setRenewalIntents] = useState<Record<string, LeaseRenewalIntent>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!ready) return;
-    getMyLeases().then((data) => {
+    getMyLeases().then(async (data) => {
       setLeases(data);
       setLoading(false);
+      const avanceActive = data.filter((l) => l.status === "actif" && l.paymentMode === "avance").map((l) => l.id);
+      setRenewalIntents(await getRenewalIntentsForLeases(avanceActive));
     });
   }, [ready]);
 
@@ -45,33 +49,49 @@ export default function CoverageEndingsPage() {
         </p>
       ) : (
         <div className="space-y-3 px-5 pb-8">
-          {upcoming.map(({ lease: l, remaining }) => (
-            <button
-              key={l.id}
-              onClick={() => router.push(`/my-leases/${l.id}`)}
-              className="block w-full rounded-2xl border border-border bg-card p-4 text-left shadow-card"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="line-clamp-1 text-sm font-bold">{l.listingTitle}</p>
-                <span
-                  className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                    remaining < 0 ? "bg-destructive/10 text-destructive" : "bg-pending-bg text-pending-text"
-                  }`}
-                >
-                  {remaining < 0 ? "Période échue, non renouvelée" : `Dans ${remaining} j`}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {l.tenantName ?? "Locataire non rattaché"} · {l.tenantPhone}
-              </p>
-              <div className="mt-1 flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Couvert jusqu&apos;au {new Date(l.endDate as string).toLocaleDateString("fr-FR")}
+          {upcoming.map(({ lease: l, remaining }) => {
+            const intent = currentRenewalIntent(l.endDate, renewalIntents[l.id]);
+            return (
+              <button
+                key={l.id}
+                onClick={() => router.push(`/my-leases/${l.id}`)}
+                className="block w-full rounded-2xl border border-border bg-card p-4 text-left shadow-card"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="line-clamp-1 text-sm font-bold">{l.listingTitle}</p>
+                  <span
+                    className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                      remaining < 0 ? "bg-destructive/10 text-destructive" : "bg-pending-bg text-pending-text"
+                    }`}
+                  >
+                    {remaining < 0 ? "Période échue, non renouvelée" : `Dans ${remaining} j`}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {l.tenantName ?? "Locataire non rattaché"} · {l.tenantPhone}
                 </p>
-                <Price amount={l.rentAmount} suffix="/ mois" size="sm" />
-              </div>
-            </button>
-          ))}
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Couvert jusqu&apos;au {new Date(l.endDate as string).toLocaleDateString("fr-FR")}
+                  </p>
+                  <Price amount={l.rentAmount} suffix="/ mois" size="sm" />
+                </div>
+                {remaining >= 0 && (
+                  <p
+                    className={`mt-2 text-xs font-semibold ${
+                      intent === "reste" ? "text-ok-text" : intent === "part" ? "text-pending-text" : "text-destructive"
+                    }`}
+                  >
+                    {intent === "reste"
+                      ? "Le locataire compte rester"
+                      : intent === "part"
+                        ? "Le locataire compte partir"
+                        : "Sans réponse du locataire"}
+                  </p>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

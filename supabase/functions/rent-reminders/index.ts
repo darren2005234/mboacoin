@@ -16,7 +16,7 @@
 // erreur sur un bail est loggée et n'interrompt pas le traitement des autres.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { generateDueDates, dueDateForPeriod, daysUntil } from "../../../lib/lease-schedule.ts";
+import { generateDueDates, dueDateForPeriod, daysUntil, COVERAGE_ENDING_SOON_DAYS } from "../../../lib/lease-schedule.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -61,6 +61,7 @@ interface ReminderRow {
   due_soon_sent_at: string | null;
   late_last_notified_at: string | null;
   coverage_ending_sent_at: string | null;
+  coverage_ending_reminder_sent_at: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -88,17 +89,24 @@ Deno.serve(async (req) => {
   const leaseIds = leaseRows.map((l) => l.id);
   if (leaseIds.length === 0) return new Response("ok", { status: 200 });
 
-  const [{ data: paymentRows }, { data: reminderRows }] = await Promise.all([
+  const [{ data: paymentRows }, { data: reminderRows }, { data: renewalRows }] = await Promise.all([
     supabase.from("lease_payments").select("lease_id, period").in("lease_id", leaseIds),
     supabase
       .from("lease_payment_reminders")
-      .select("lease_id, period, due_soon_sent_at, late_last_notified_at, coverage_ending_sent_at")
+      .select("lease_id, period, due_soon_sent_at, late_last_notified_at, coverage_ending_sent_at, coverage_ending_reminder_sent_at")
       .in("lease_id", leaseIds),
+    supabase.from("lease_renewal_intents").select("lease_id, coverage_end_date").in("lease_id", leaseIds),
   ]);
 
   const paidSet = new Set((paymentRows ?? []).map((p) => `${p.lease_id}:${p.period}`));
   const reminderMap = new Map(
     ((reminderRows ?? []) as ReminderRow[]).map((r) => [`${r.lease_id}:${r.period}`, r])
+  );
+  // Une réponse existe pour le cycle de couverture EN COURS (coverage_end_date
+  // = end_date actuel du bail) : une réponse donnée à un cycle antérieur, déjà
+  // dépassé par un nouveau versement, ne compte plus pour la relance J-30.
+  const answeredSet = new Set(
+    (renewalRows ?? []).map((r) => `${r.lease_id}:${r.coverage_end_date}`)
   );
 
   const today = new Date();
@@ -107,42 +115,60 @@ Deno.serve(async (req) => {
     try {
       if (!lease.tenant_id) continue;
 
-      // Bail en mode avance : ni échéance mensuelle ni retard, un seul
-      // rappel (un mois avant la fin de couverture), envoyé une fois.
+      // Bail en mode avance : la fin de couverture n'est pas qu'un rappel de
+      // paiement, c'est une question posée au locataire ("comptez-vous
+      // rester ?") qui appelle une intention de renouvellement — voir
+      // lease_renewal_intents (20260715160000). J-60 (COVERAGE_ENDING_SOON_DAYS,
+      // même seuil que les badges bailleur) : sollicitation initiale, au
+      // locataire uniquement. J-30 : relance, UNIQUEMENT si toujours sans
+      // réponse pour ce cycle de couverture — une réponse déjà donnée
+      // (dans un sens comme dans l'autre) annule la relance. Le bailleur
+      // n'est plus notifié ici : il l'est quand le locataire répond (voir
+      // lease_renewal_intents_after_write_notify), et voit "sans réponse"
+      // en continu sur son tableau de bord — pas besoin d'un rappel FYI.
       if (lease.payment_mode === "avance") {
         if (!lease.end_date) continue; // aucune couverture déclarée pour l'instant
         const delta = daysUntil(lease.end_date);
-        if (delta !== 30) continue; // même convention que due_soon (delta === 3) : un seul tir
         const reminder = reminderMap.get(`${lease.id}:${lease.end_date}`);
-        if (reminder?.coverage_ending_sent_at) continue;
-
-        const listing = one(lease.listing);
         const label = formatDateLabel(lease.end_date);
 
-        await supabase.rpc("notifications_create", {
-          p_user_id: lease.tenant_id,
-          p_actor_id: null,
-          p_type: "lease_coverage_ending_soon",
-          p_title: `La période payée s'achève le ${label}`,
-          p_link: `/my-lease/${lease.id}`,
-          p_lease_id: lease.id,
-          p_listing_id: lease.listing_id,
-        });
-        await supabase.rpc("notifications_create", {
-          p_user_id: lease.landlord_id,
-          p_actor_id: null,
-          p_type: "lease_coverage_ending_soon",
-          p_title: `La période payée pour ${listing?.title ?? "votre logement"} s'achève le ${label}`,
-          p_link: `/my-leases/${lease.id}`,
-          p_lease_id: lease.id,
-          p_listing_id: lease.listing_id,
-        });
-        await supabase
-          .from("lease_payment_reminders")
-          .upsert(
-            { lease_id: lease.id, period: lease.end_date, coverage_ending_sent_at: new Date().toISOString() },
-            { onConflict: "lease_id,period" }
-          );
+        if (delta === COVERAGE_ENDING_SOON_DAYS && !reminder?.coverage_ending_sent_at) {
+          await supabase.rpc("notifications_create", {
+            p_user_id: lease.tenant_id,
+            p_actor_id: null,
+            p_type: "lease_renewal_intent_requested",
+            p_title: `Votre période payée s'achève le ${label}. Comptez-vous rester ?`,
+            p_link: `/my-lease/${lease.id}`,
+            p_lease_id: lease.id,
+            p_listing_id: lease.listing_id,
+          });
+          await supabase
+            .from("lease_payment_reminders")
+            .upsert(
+              { lease_id: lease.id, period: lease.end_date, coverage_ending_sent_at: new Date().toISOString() },
+              { onConflict: "lease_id,period" }
+            );
+        } else if (
+          delta === 30 &&
+          !answeredSet.has(`${lease.id}:${lease.end_date}`) &&
+          !reminder?.coverage_ending_reminder_sent_at
+        ) {
+          await supabase.rpc("notifications_create", {
+            p_user_id: lease.tenant_id,
+            p_actor_id: null,
+            p_type: "lease_renewal_intent_reminder",
+            p_title: `Vous n'avez pas encore répondu : votre période s'achève le ${label}. Comptez-vous rester ?`,
+            p_link: `/my-lease/${lease.id}`,
+            p_lease_id: lease.id,
+            p_listing_id: lease.listing_id,
+          });
+          await supabase
+            .from("lease_payment_reminders")
+            .upsert(
+              { lease_id: lease.id, period: lease.end_date, coverage_ending_reminder_sent_at: new Date().toISOString() },
+              { onConflict: "lease_id,period" }
+            );
+        }
         continue;
       }
 

@@ -1,31 +1,23 @@
+/**
+ * Fenêtre "couverture bientôt échue" (mode avance), partagée par les badges
+ * de l'espace bailleur (liste des baux, détail d'un bail), /my-leases/coverage
+ * et la synthèse par résidence. Volontairement plus large que le rappel
+ * locataire (J-30, voir supabase/functions/rent-reminders) : un gestionnaire
+ * doit pouvoir relouer avant l'échéance, pas seulement être notifié en même
+ * temps que son locataire — sinon il n'a aucune avance pour réagir.
+ */
+export const COVERAGE_ENDING_SOON_DAYS = 60;
+
 function clampToMonth(day: number, year: number, month: number): Date {
   const lastDay = new Date(year, month + 1, 0).getDate();
   return new Date(year, month, Math.min(day, lastDay));
 }
 
-/**
- * Calcule la prochaine échéance de paiement d'un bail à partir du jour de
- * paiement et de la périodicité. Fonction pure (aucune dépendance Supabase),
- * importable depuis un composant serveur ou client.
- */
-export function nextPaymentDueDate(
-  startDate: string,
-  paymentDay: number | null,
-  paymentPeriod: string
-): Date | null {
-  if (paymentPeriod === "journalier") return null;
-
-  const day = paymentDay ?? new Date(startDate).getDate();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let candidate = clampToMonth(day, today.getFullYear(), today.getMonth());
-  if (candidate < today) candidate = clampToMonth(day, today.getFullYear(), today.getMonth() + 1);
-
-  const start = new Date(startDate);
-  if (candidate < start) candidate = clampToMonth(day, start.getFullYear(), start.getMonth() + 1);
-
-  return candidate;
+/** Date du jour en ISO, en heure LOCALE (pas toISOString, qui convertit en
+ * UTC et peut renvoyer la veille pour un fuseau positif en début de nuit). */
+export function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /**
@@ -86,6 +78,47 @@ export function dueDateForPeriod(period: string, paymentDay: number | null, star
   const m = String(clamped.getMonth() + 1).padStart(2, "0");
   const d = String(clamped.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * Date d'échéance de la PREMIÈRE période sans paiement enregistré, en
+ * parcourant les mois dans l'ordre depuis le début du bail et en croisant
+ * chacun avec `paidPeriods` (l'intégralité des paiements du bail, jamais
+ * seulement le dernier, ni la période courante, ni la date du jour). Un
+ * versement groupé peut avoir couvert des mois futurs : cette fonction ne
+ * s'arrête donc jamais à "aujourd'hui" comme le ferait generateDueDates,
+ * elle continue jusqu'au premier vrai trou, même au-delà de la couverture
+ * déjà payée. Règle : une période avec un paiement enregistré n'est jamais
+ * due ni en retard, quelle que soit la date effective du versement.
+ *
+ * Fonction pure (aucune dépendance Supabase), importable depuis un
+ * composant serveur ou client. Renvoie null pour un bail journalier (pas
+ * d'échéance fixe) ou si les 100 prochaines années sont déjà couvertes
+ * (garde-fou, ne devrait jamais se produire en pratique).
+ */
+export function nextUnpaidDueDate(
+  startDate: string,
+  paymentDay: number | null,
+  paymentPeriod: string,
+  paidPeriods: ReadonlySet<string>
+): string | null {
+  if (paymentPeriod === "journalier") return null;
+
+  let year = Number(startDate.slice(0, 4));
+  let month = Number(startDate.slice(5, 7)); // 1-indexé
+
+  for (let i = 0; i < 1200; i++) {
+    const period = `${year}-${String(month).padStart(2, "0")}-01`;
+    if (!paidPeriods.has(period)) {
+      return dueDateForPeriod(period, paymentDay, startDate);
+    }
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return null;
 }
 
 /** Nombre de jours entre aujourd'hui et une date ISO (négatif si passée). */

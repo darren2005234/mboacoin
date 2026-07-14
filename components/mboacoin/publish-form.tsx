@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,9 @@ const AMENITIES = [
 
 const DRAFT_KEY = "mboacoin-draft-annonce";
 
-export function PublishForm({ accountType, verified }: { accountType: string; verified: boolean }) {
+function PublishFormInner({ accountType, verified }: { accountType: string; verified: boolean }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isResidence = accountType === "residence";
   const [residences, setResidences] = useState<Residence[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -35,7 +36,10 @@ export function PublishForm({ accountType, verified }: { accountType: string; ve
   const [city, setCity] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [address, setAddress] = useState("");
-  const [residenceId, setResidenceId] = useState("");
+  // Préremplie depuis l'invitation "Publier une annonce" d'une résidence
+  // vide (voir components/mboacoin/my-leases-by-residence.tsx) ; un
+  // brouillon restauré ensuite reste prioritaire (restoreDraft ci-dessous).
+  const [residenceId, setResidenceId] = useState(() => searchParams.get("residence") ?? "");
   const [price, setPrice] = useState("");
   const [pricePeriod, setPricePeriod] = useState("mensuel");
   const [bedrooms, setBedrooms] = useState("");
@@ -728,5 +732,14 @@ function restoreDraft() {
         </Button>
       </form>
     </div>
+  );
+}
+
+/** useSearchParams (résidence préremplie depuis l'invitation d'une résidence vide) exige une frontière Suspense. */
+export function PublishForm(props: { accountType: string; verified: boolean }) {
+  return (
+    <Suspense>
+      <PublishFormInner {...props} />
+    </Suspense>
   );
 }

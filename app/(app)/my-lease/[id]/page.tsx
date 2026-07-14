@@ -7,9 +7,11 @@ import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Price } from "@/components/mboacoin/price";
 import { Icon } from "@/components/mboacoin/icon";
 import { priceSuffixFor } from "@/lib/price-period";
-import { nextPaymentDueDate, generateDueDates, dueDateForPeriod } from "@/lib/lease-schedule";
+import { nextUnpaidDueDate, todayIso, daysUntil, COVERAGE_ENDING_SOON_DAYS } from "@/lib/lease-schedule";
+import { currentRenewalIntent } from "@/lib/lease-renewal-intent";
 import { createClient } from "@/lib/supabase/server";
 import { TenantLeaseActions } from "@/components/mboacoin/tenant-lease-actions";
+import { RenewalIntentPrompt } from "@/components/mboacoin/renewal-intent-prompt";
 import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
 import { loginUrl } from "@/lib/auth-redirect";
 
@@ -60,7 +62,6 @@ export default async function LeaseDetailPage({
 
   const listing = Array.isArray(row.listing) ? row.listing[0] : row.listing;
   const landlord = Array.isArray(row.landlord) ? row.landlord[0] : row.landlord;
-  const dueDate = nextPaymentDueDate(row.start_date, row.payment_day, row.payment_period);
 
   const { data: paymentRows } = await supabase
     .from("lease_payments")
@@ -69,17 +70,41 @@ export default async function LeaseDetailPage({
     .order("period", { ascending: false });
   const payments = paymentRows ?? [];
 
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const today = todayIso();
   const paidPeriods = new Set(payments.map((p) => p.period));
+  // Prochaine échéance = première période sans paiement enregistré, en
+  // croisant TOUS les paiements du bail (voir lib/lease-schedule.ts) — même
+  // source de vérité que l'espace bailleur et le badge À jour/En retard.
+  const dueDate =
+    row.payment_mode === "avance"
+      ? null
+      : nextUnpaidDueDate(row.start_date, row.payment_day, row.payment_period, paidPeriods);
   // En mode avance, il n'y a jamais de retard : soit la période est
   // couverte, soit le bail arrive à son terme (voir la bannière dédiée).
-  const isLate =
-    row.payment_mode !== "avance" &&
-    generateDueDates(row.start_date, row.payment_period).some((period) => {
-      if (paidPeriods.has(period)) return false;
-      return dueDateForPeriod(period, row.payment_day, row.start_date) < today;
-    });
+  const isLate = row.payment_mode !== "avance" && dueDate !== null && dueDate < today;
+
+  // Intention de renouvellement (mode avance) : question posée dès J-60,
+  // modifiable jusqu'à l'échéance — voir components/mboacoin/renewal-intent-prompt.tsx.
+  const remaining = row.payment_mode === "avance" && row.end_date ? daysUntil(row.end_date) : null;
+  const showRenewalPrompt = remaining !== null && remaining <= COVERAGE_ENDING_SOON_DAYS;
+  let renewalIntent: "reste" | "part" | null = null;
+  if (showRenewalPrompt) {
+    const { data: renewalRow } = await supabase
+      .from("lease_renewal_intents")
+      .select("intent, coverage_end_date, responded_at, updated_at")
+      .eq("lease_id", row.id)
+      .order("coverage_end_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    renewalIntent = renewalRow
+      ? currentRenewalIntent(row.end_date, {
+          intent: renewalRow.intent as "reste" | "part",
+          coverageEndDate: renewalRow.coverage_end_date,
+          respondedAt: renewalRow.responded_at,
+          updatedAt: renewalRow.updated_at,
+        })
+      : null;
+  }
 
   const { data: amendmentRow } = await supabase
     .from("lease_amendments")
@@ -207,7 +232,9 @@ export default async function LeaseDetailPage({
             ) : (
               <>
                 <p className="text-sm font-bold">
-                  {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
+                  {dueDate
+                    ? `Prochain loyer dû le ${new Date(dueDate).toLocaleDateString("fr-FR")}`
+                    : "Facturation quotidienne"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {row.payment_period === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
@@ -221,6 +248,16 @@ export default async function LeaseDetailPage({
             </span>
           )}
         </div>
+
+        {/* Intention de renouvellement (mode avance, à l'approche de la fin de couverture) */}
+        {showRenewalPrompt && row.end_date && (
+          <RenewalIntentPrompt
+            leaseId={row.id}
+            endDate={row.end_date}
+            editable={remaining !== null && remaining >= 0}
+            initialIntent={renewalIntent}
+          />
+        )}
 
         {/* Historique des paiements */}
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-card">

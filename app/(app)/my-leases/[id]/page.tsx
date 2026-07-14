@@ -11,8 +11,15 @@ import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Button } from "@/components/ui/button";
 import { priceSuffixFor } from "@/lib/price-period";
 import { getMyLeaseById, addMonths, cancelPendingLease, endActiveLease, type MyLease } from "@/lib/leases";
-import { getLeaseSchedule, declarePayment, declarePaymentBatch, type DueInstallment } from "@/lib/lease-payments";
-import { nextPaymentDueDate, daysUntil } from "@/lib/lease-schedule";
+import {
+  getLeaseSchedule,
+  declarePayment,
+  declarePaymentBatch,
+  type DueInstallment,
+  type LeaseSchedule,
+} from "@/lib/lease-payments";
+import { daysUntil, todayIso, COVERAGE_ENDING_SOON_DAYS } from "@/lib/lease-schedule";
+import { getRenewalIntentsForLeases, currentRenewalIntent, type LeaseRenewalIntent } from "@/lib/lease-renewal-intent";
 import { getLeaseRequests, REQUEST_TYPE_LABELS, type LeaseRequestSummary } from "@/lib/lease-requests";
 import { getLeaseDocuments, uploadLeaseContract, getContractSignedUrl } from "@/lib/lease-documents";
 import { useRequireAuth } from "@/lib/use-require-auth";
@@ -43,7 +50,8 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
   const router = useRouter();
   const { ready } = useRequireAuth();
   const [lease, setLease] = useState<MyLease | null>(null);
-  const [schedule, setSchedule] = useState<DueInstallment[]>([]);
+  const [schedule, setSchedule] = useState<LeaseSchedule>({ installments: [], nextDueDate: null });
+  const [renewalIntent, setRenewalIntent] = useState<LeaseRenewalIntent | undefined>(undefined);
   const [requests, setRequests] = useState<LeaseRequestSummary[]>([]);
   const [amendments, setAmendments] = useState<LeaseAmendment[]>([]);
   const [inspections, setInspections] = useState<InspectionSummary[]>([]);
@@ -71,6 +79,10 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
     setLease(l);
     if (l.status === "actif" && l.paymentPeriod === "mensuel" && l.paymentMode !== "avance") {
       setSchedule(await getLeaseSchedule(l));
+    }
+    if (l.status === "actif" && l.paymentMode === "avance") {
+      const intents = await getRenewalIntentsForLeases([l.id]);
+      setRenewalIntent(intents[l.id]);
     }
     setAmendments(await getLeaseAmendments(id));
     setInspections(await getInspectionsSummary(id));
@@ -201,9 +213,14 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
     return <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>;
   }
 
-  const dueDate = nextPaymentDueDate(lease.startDate, lease.paymentDay, lease.paymentPeriod);
-  const isLate = lease.status === "actif" && schedule.some((i) => i.late);
+  // Même source de vérité que l'espace locataire et le badge À jour/En
+  // retard de la liste des baux : la première période sans paiement
+  // enregistré (voir lib/lease-schedule.ts).
+  const dueDate = schedule.nextDueDate;
+  const isLate =
+    lease.status === "actif" && lease.paymentMode !== "avance" && dueDate !== null && dueDate < todayIso();
   const remaining = lease.status === "actif" && lease.endDate ? daysUntil(lease.endDate) : null;
+  const intent = lease.paymentMode === "avance" ? currentRenewalIntent(lease.endDate, renewalIntent) : null;
   const isEnded = ["termine", "arrete", "resilie", "rejete", "annule"].includes(lease.status);
   const pendingAmendment = amendments.find((a) => a.status === "en_attente") ?? null;
   const pastAmendments = amendments.filter((a) => a.status !== "en_attente");
@@ -343,7 +360,9 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
                 ) : (
                   <>
                     <p className="text-sm font-bold">
-                      {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
+                      {dueDate
+                        ? `Prochain loyer dû le ${new Date(dueDate).toLocaleDateString("fr-FR")}`
+                        : "Facturation quotidienne"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {lease.paymentPeriod === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
@@ -359,7 +378,7 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
             </div>
 
             {/* Alerte d'échéance / fin de couverture */}
-            {remaining !== null && remaining <= 30 && (
+            {remaining !== null && remaining <= COVERAGE_ENDING_SOON_DAYS && (
               <div
                 className={`flex items-center gap-3 rounded-2xl border p-4 shadow-card ${
                   remaining < 0 ? "border-destructive/30 bg-destructive/5" : "border-pending-bg bg-pending-bg/40"
@@ -384,6 +403,23 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
                   <p className="text-xs text-muted-foreground">
                     {lease.endDate && new Date(lease.endDate).toLocaleDateString("fr-FR")}
                   </p>
+                  {lease.paymentMode === "avance" && remaining >= 0 && (
+                    <p
+                      className={`mt-0.5 text-xs font-semibold ${
+                        intent === "reste"
+                          ? "text-ok-text"
+                          : intent === "part"
+                            ? "text-pending-text"
+                            : "text-destructive"
+                      }`}
+                    >
+                      {intent === "reste"
+                        ? "Le locataire compte rester"
+                        : intent === "part"
+                          ? "Le locataire compte partir"
+                          : "Le locataire n'a pas encore répondu"}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col gap-1 text-right">
                   {lease.paymentMode === "avance" ? (
@@ -489,10 +525,10 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
                     />
                   </div>
                 )}
-                {schedule.length === 0 ? (
+                {schedule.installments.length === 0 ? (
                   <p className="px-1 text-xs text-muted-foreground">Aucune échéance pour l&apos;instant.</p>
                 ) : (
-                  schedule.map((installment) => (
+                  schedule.installments.map((installment) => (
                     <InstallmentRow
                       key={installment.period}
                       installment={installment}

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { generateDueDates, dueDateForPeriod } from "@/lib/lease-schedule";
+import { generateDueDates, dueDateForPeriod, nextUnpaidDueDate, todayIso } from "@/lib/lease-schedule";
 
 export interface LeasePayment {
   id: string;
@@ -66,7 +66,7 @@ export async function declarePayment(
     if (error.code === "23505") {
       return { error: "Cette période a déjà été déclarée payée." };
     }
-    return { error: "Impossible de déclarer ce paiement." };
+    return { error: error.message || "Impossible de déclarer ce paiement." };
   }
   return {};
 }
@@ -110,11 +110,11 @@ export interface DueInstallment {
   late: boolean;
 }
 
-/** Date du jour en ISO, en heure LOCALE (pas toISOString, qui convertit en
- * UTC et peut renvoyer la veille pour un fuseau positif en début de nuit). */
-function todayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+export interface LeaseSchedule {
+  installments: DueInstallment[];
+  /** Échéance de la première période sans paiement enregistré (voir nextUnpaidDueDate) — la
+   * seule source de vérité pour "prochain loyer dû", partagée avec getLeasesScheduleStatus. */
+  nextDueDate: string | null;
 }
 
 /** Planning complet d'un bail mensuel : chaque échéance, payée ou non, en retard ou non. */
@@ -124,9 +124,10 @@ export async function getLeaseSchedule(lease: {
   paymentDay: number | null;
   paymentPeriod: string;
   endDate: string | null;
-}): Promise<DueInstallment[]> {
+}): Promise<LeaseSchedule> {
   const payments = await getLeasePayments(lease.id);
   const paidByPeriod = new Map(payments.map((p) => [p.period, p]));
+  const paidPeriods = new Set(paidByPeriod.keys());
 
   let until = lease.endDate && new Date(lease.endDate) < new Date() ? new Date(lease.endDate) : new Date();
   // Un versement groupé peut couvrir des mois futurs (point 7) : ils doivent
@@ -140,17 +141,32 @@ export async function getLeaseSchedule(lease: {
   const dueDates = generateDueDates(lease.startDate, lease.paymentPeriod, until);
   const today = todayIso();
 
-  return dueDates
+  const installments = dueDates
     .map((period) => {
       const paid = paidByPeriod.get(period) ?? null;
       const dueDate = dueDateForPeriod(period, lease.paymentDay, lease.startDate);
       return { period, dueDate, paid, late: !paid && dueDate < today };
     })
     .sort((a, b) => (a.period < b.period ? 1 : -1));
+
+  const nextDueDate = nextUnpaidDueDate(lease.startDate, lease.paymentDay, lease.paymentPeriod, paidPeriods);
+
+  return { installments, nextDueDate };
 }
 
-/** À jour / en retard pour une liste de baux, en une seule requête (pas de N+1). */
-export async function getLeasesLateStatus(
+export interface LeaseScheduleStatus {
+  late: boolean;
+  nextDueDate: string | null;
+}
+
+/**
+ * À jour / en retard + prochaine échéance pour une liste de baux, en une
+ * seule requête (pas de N+1). Dérivées de la même fonction que
+ * getLeaseSchedule (nextUnpaidDueDate) : "en retard" est simplement "la
+ * première période sans paiement est déjà passée" — les deux ne peuvent
+ * jamais diverger puisqu'ils viennent du même calcul.
+ */
+export async function getLeasesScheduleStatus(
   leases: {
     id: string;
     startDate: string;
@@ -158,29 +174,33 @@ export async function getLeasesLateStatus(
     paymentPeriod: string;
     paymentMode: string;
   }[]
-): Promise<Record<string, boolean>> {
+): Promise<Record<string, LeaseScheduleStatus>> {
   const ids = leases.map((l) => l.id);
-  const result: Record<string, boolean> = {};
+  const result: Record<string, LeaseScheduleStatus> = {};
   if (ids.length === 0) return result;
 
   const supabase = createClient();
   const { data } = await supabase.from("lease_payments").select("lease_id, period").in("lease_id", ids);
 
-  const paidSet = new Set((data ?? []).map((p) => `${p.lease_id}:${p.period}`));
+  const paidByLease = new Map<string, Set<string>>();
+  for (const row of data ?? []) {
+    const set = paidByLease.get(row.lease_id) ?? new Set<string>();
+    set.add(row.period);
+    paidByLease.set(row.lease_id, set);
+  }
+
   const today = todayIso();
 
   for (const lease of leases) {
     // Un bail en mode avance n'a jamais de retard : soit la période est
     // couverte, soit le bail arrive à son terme (voir la bannière dédiée).
     if (lease.paymentMode === "avance") {
-      result[lease.id] = false;
+      result[lease.id] = { late: false, nextDueDate: null };
       continue;
     }
-    const dueDates = generateDueDates(lease.startDate, lease.paymentPeriod);
-    result[lease.id] = dueDates.some((d) => {
-      if (paidSet.has(`${lease.id}:${d}`)) return false;
-      return dueDateForPeriod(d, lease.paymentDay, lease.startDate) < today;
-    });
+    const paidPeriods = paidByLease.get(lease.id) ?? new Set<string>();
+    const nextDueDate = nextUnpaidDueDate(lease.startDate, lease.paymentDay, lease.paymentPeriod, paidPeriods);
+    result[lease.id] = { late: nextDueDate !== null && nextDueDate < today, nextDueDate };
   }
   return result;
 }
