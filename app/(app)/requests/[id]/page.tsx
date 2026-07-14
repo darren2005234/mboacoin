@@ -14,6 +14,7 @@ import {
   type LeaseRequestThread,
 } from "@/lib/lease-requests";
 import { useRequireAuth } from "@/lib/use-require-auth";
+import { Lightbox } from "@/components/mboacoin/lightbox";
 
 export default function LeaseRequestThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -29,6 +30,7 @@ export default function LeaseRequestThreadPage({ params }: { params: Promise<{ i
   const [sending, setSending] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ images: string[]; index: number } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function refresh() {
@@ -143,13 +145,15 @@ export default function LeaseRequestThreadPage({ params }: { params: Promise<{ i
         <p className="text-sm">{request.description}</p>
         {thread.requestAttachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {thread.requestAttachments.map((a) =>
-              urls[a.id] ? (
-                <a key={a.id} href={urls[a.id]} target="_blank" rel="noopener noreferrer">
-                  <img src={urls[a.id]} alt="" className="size-16 rounded-lg object-cover" />
-                </a>
-              ) : null
-            )}
+            {thread.requestAttachments.map((a) => {
+              const groupUrls = thread.requestAttachments.map((x) => urls[x.id]).filter((u): u is string => !!u);
+              const url = urls[a.id];
+              return url ? (
+                <button key={a.id} type="button" onClick={() => setZoom({ images: groupUrls, index: groupUrls.indexOf(url) })}>
+                  <img src={url} alt="" className="size-16 rounded-lg object-cover" />
+                </button>
+              ) : null;
+            })}
           </div>
         )}
       </div>
@@ -216,13 +220,19 @@ export default function LeaseRequestThreadPage({ params }: { params: Promise<{ i
                   <span>{m.body}</span>
                   {m.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {m.attachments.map((a) =>
-                        urls[a.id] ? (
-                          <a key={a.id} href={urls[a.id]} target="_blank" rel="noopener noreferrer">
-                            <img src={urls[a.id]} alt="" className="size-16 rounded-lg object-cover" />
-                          </a>
-                        ) : null
-                      )}
+                      {m.attachments.map((a) => {
+                        const groupUrls = m.attachments.map((x) => urls[x.id]).filter((u): u is string => !!u);
+                        const url = urls[a.id];
+                        return url ? (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => setZoom({ images: groupUrls, index: groupUrls.indexOf(url) })}
+                          >
+                            <img src={url} alt="" className="size-16 rounded-lg object-cover" />
+                          </button>
+                        ) : null;
+                      })}
                     </div>
                   )}
                 </div>
@@ -262,6 +272,10 @@ export default function LeaseRequestThreadPage({ params }: { params: Promise<{ i
           </button>
         </div>
       </div>
+
+      {zoom && (
+        <Lightbox images={zoom.images} startIndex={zoom.index} onClose={() => setZoom(null)} unoptimized />
+      )}
     </div>
   );
 }

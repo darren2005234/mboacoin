@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { getPublicResidence } from "@/lib/public-residence";
 import { ListingCard } from "@/components/mboacoin/listing-card";
 import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { BackButton } from "@/components/mboacoin/back-button";
+import { ResidenceHeroImage } from "@/components/mboacoin/residence-hero-image";
 import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
 
 export default async function PublicResidencePage({
@@ -19,13 +19,7 @@ export default async function PublicResidencePage({
   return (
     <div className="flex flex-col">
       <div className="relative h-56 w-full bg-secondary">
-        <Image
-          src={residence.imageUrl ?? "/img/listings/demo-1.jpg"}
-          alt=""
-          fill
-          className="object-cover"
-          sizes="100vw"
-        />
+        <ResidenceHeroImage src={residence.imageUrl ?? "/img/listings/demo-1.jpg"} />
         <BackButton fallback="/explore" />
       </div>
 

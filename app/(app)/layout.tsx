@@ -11,6 +11,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   let pendingLeaseCount = 0;
   if (user) {
+    // Rattache par téléphone les baux créés depuis la dernière visite. La
+    // session persiste sans nouvel OTP, donc l'appel fait une seule fois à
+    // la vérification du code (app/(auth)/verify/page.tsx) ne suffit pas :
+    // un bail créé après la dernière connexion OTP restait orphelin. On le
+    // rejoue ici à chaque chargement du layout authentifié (opération
+    // idempotente, sans effet si rien de nouveau à rattacher).
+    const { error: linkError } = await supabase.rpc("link_my_pending_leases");
+    if (linkError) {
+      // Ne doit normalement jamais arriver (cf. 20260715130000) : loggé pour
+      // ne plus jamais échouer silencieusement comme la première fois.
+      console.error("link_my_pending_leases a échoué", { userId: user.id, error: linkError.message });
+    }
+
     const { count } = await supabase
       .from("leases")
       .select("id", { count: "exact", head: true })

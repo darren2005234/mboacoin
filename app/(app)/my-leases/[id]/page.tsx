@@ -11,7 +11,7 @@ import { TrustSealBadge } from "@/components/mboacoin/trust-seal";
 import { Button } from "@/components/ui/button";
 import { priceSuffixFor } from "@/lib/price-period";
 import { getMyLeaseById, addMonths, cancelPendingLease, endActiveLease, type MyLease } from "@/lib/leases";
-import { getLeaseSchedule, declarePayment, type DueInstallment } from "@/lib/lease-payments";
+import { getLeaseSchedule, declarePayment, declarePaymentBatch, type DueInstallment } from "@/lib/lease-payments";
 import { nextPaymentDueDate, daysUntil } from "@/lib/lease-schedule";
 import { getLeaseRequests, REQUEST_TYPE_LABELS, type LeaseRequestSummary } from "@/lib/lease-requests";
 import { getLeaseDocuments, uploadLeaseContract, getContractSignedUrl } from "@/lib/lease-documents";
@@ -23,6 +23,7 @@ import {
   type LeaseAmendment,
   type AmendmentPatch,
 } from "@/lib/lease-amendments";
+import { getInspectionsSummary, INSPECTION_STATUS_LABELS, type InspectionSummary } from "@/lib/property-inspections";
 
 const dateInputCls =
   "w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
@@ -45,6 +46,7 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
   const [schedule, setSchedule] = useState<DueInstallment[]>([]);
   const [requests, setRequests] = useState<LeaseRequestSummary[]>([]);
   const [amendments, setAmendments] = useState<LeaseAmendment[]>([]);
+  const [inspections, setInspections] = useState<InspectionSummary[]>([]);
   const [contractUrl, setContractUrl] = useState<string | null>(null);
   const [uploadingContract, setUploadingContract] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -58,6 +60,7 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
   const [cancelReason, setCancelReason] = useState("");
   const [showEndForm, setShowEndForm] = useState(false);
   const [showAmendForm, setShowAmendForm] = useState(false);
+  const [showBatchForm, setShowBatchForm] = useState(false);
 
   async function refresh() {
     const l = await getMyLeaseById(id);
@@ -66,10 +69,11 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
       return;
     }
     setLease(l);
-    if (l.status === "actif" && l.paymentPeriod === "mensuel") {
+    if (l.status === "actif" && l.paymentPeriod === "mensuel" && l.paymentMode !== "avance") {
       setSchedule(await getLeaseSchedule(l));
     }
     setAmendments(await getLeaseAmendments(id));
+    setInspections(await getInspectionsSummary(id));
     setRequests(await getLeaseRequests(id));
     const documents = await getLeaseDocuments(id);
     const contract = documents.find((d) => d.documentType === "contrat");
@@ -124,6 +128,20 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
     }
     setFreePeriod("");
     setFreePaidAt("");
+    await refresh();
+    setBusy(null);
+  }
+
+  async function onDeclareBatch(startPeriod: string, months: number, paidAt: string) {
+    setError(null);
+    setBusy("batch");
+    const result = await declarePaymentBatch({ leaseId: id, startPeriod, months, paidAt });
+    if (result.error) {
+      setError(result.error);
+      setBusy(null);
+      return;
+    }
+    setShowBatchForm(false);
     await refresh();
     setBusy(null);
   }
@@ -286,6 +304,9 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
               <Info label="Avance" value={<Price amount={lease.advanceAmount} size="sm" />} />
             ) : null}
             {lease.paymentDay ? <Info label="Jour de paiement" value={String(lease.paymentDay)} /> : null}
+            {lease.paymentPeriod === "mensuel" && (
+              <Info label="Mode de paiement" value={lease.paymentMode === "avance" ? "Avance" : "Mensuel"} />
+            )}
           </div>
         </div>
 
@@ -304,18 +325,31 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
 
         {lease.status === "actif" && (
           <>
-            {/* Prochaine échéance */}
+            {/* Prochaine échéance / couverture */}
             <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card">
               <span className="icon-badge size-11">
                 <Icon name="event" size={20} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold">
-                  {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {lease.paymentPeriod === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
-                </p>
+                {lease.paymentMode === "avance" ? (
+                  <>
+                    <p className="text-sm font-bold">
+                      {lease.endDate
+                        ? `Couvert jusqu'au ${new Date(lease.endDate).toLocaleDateString("fr-FR")}`
+                        : "Aucune période payée pour l'instant"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Paiement d&apos;avance</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-bold">
+                      {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {lease.paymentPeriod === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
+                    </p>
+                  </>
+                )}
               </div>
               {isLate && (
                 <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
@@ -324,7 +358,7 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
 
-            {/* Alerte d'échéance */}
+            {/* Alerte d'échéance / fin de couverture */}
             {remaining !== null && remaining <= 30 && (
               <div
                 className={`flex items-center gap-3 rounded-2xl border p-4 shadow-card ${
@@ -339,19 +373,34 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold">
-                    {remaining < 0 ? "Ce bail est arrivé à échéance" : "Ce bail arrive bientôt à échéance"}
+                    {lease.paymentMode === "avance"
+                      ? remaining < 0
+                        ? "Période échue, non renouvelée"
+                        : "La période payée se termine bientôt"
+                      : remaining < 0
+                        ? "Ce bail est arrivé à échéance"
+                        : "Ce bail arrive bientôt à échéance"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {lease.endDate && new Date(lease.endDate).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col gap-1 text-right">
-                  <button
-                    onClick={() => setShowAmendForm(true)}
-                    className="text-xs font-bold text-accent underline"
-                  >
-                    Prolonger
-                  </button>
+                  {lease.paymentMode === "avance" ? (
+                    <button
+                      onClick={() => setShowBatchForm(true)}
+                      className="text-xs font-bold text-accent underline"
+                    >
+                      Déclarer un versement
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowAmendForm(true)}
+                      className="text-xs font-bold text-accent underline"
+                    >
+                      Prolonger
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowEndForm(true)}
                     className="text-xs font-bold text-destructive underline"
@@ -411,9 +460,35 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
               )}
             </div>
 
-            {lease.paymentPeriod === "mensuel" ? (
+            {lease.paymentMode === "avance" ? (
+              <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
+                <p className="text-sm font-bold">Déclarer un versement</p>
+                <p className="text-xs text-muted-foreground">
+                  Choisissez le mois de départ couvert et le nombre de mois payés d&apos;avance.
+                </p>
+                <BatchPaymentForm rentAmount={lease.rentAmount} onSubmit={onDeclareBatch} busy={busy === "batch"} />
+              </div>
+            ) : lease.paymentPeriod === "mensuel" ? (
               <div className="space-y-2">
-                <p className="px-1 text-sm font-bold">Échéances</p>
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-sm font-bold">Échéances</p>
+                  <button
+                    onClick={() => setShowBatchForm((v) => !v)}
+                    className="text-xs font-bold text-accent underline"
+                  >
+                    {showBatchForm ? "Fermer" : "Déclarer un versement groupé"}
+                  </button>
+                </div>
+                {showBatchForm && (
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+                    <BatchPaymentForm
+                      rentAmount={lease.rentAmount}
+                      onSubmit={onDeclareBatch}
+                      onCancel={() => setShowBatchForm(false)}
+                      busy={busy === "batch"}
+                    />
+                  </div>
+                )}
                 {schedule.length === 0 ? (
                   <p className="px-1 text-xs text-muted-foreground">Aucune échéance pour l&apos;instant.</p>
                 ) : (
@@ -486,6 +561,13 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
 
+        {/* État des lieux */}
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
+          <p className="text-sm font-bold">État des lieux</p>
+          <InspectionLinkRow leaseId={id} type="entree" summary={inspections.find((i) => i.type === "entree")} />
+          <InspectionLinkRow leaseId={id} type="sortie" summary={inspections.find((i) => i.type === "sortie")} />
+        </div>
+
         {/* Contrat de bail */}
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
           <p className="text-sm font-bold">Contrat de bail</p>
@@ -530,6 +612,28 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function InspectionLinkRow({
+  leaseId,
+  type,
+  summary,
+}: {
+  leaseId: string;
+  type: "entree" | "sortie";
+  summary?: InspectionSummary;
+}) {
+  return (
+    <Link
+      href={`/my-leases/${leaseId}/inspections/${type}`}
+      className="flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2.5 text-xs font-bold"
+    >
+      {type === "entree" ? "Entrée" : "Sortie"}
+      <span className="shrink-0 rounded-md bg-card px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+        {summary ? INSPECTION_STATUS_LABELS[summary.status] ?? summary.status : "Pas encore créé"}
+      </span>
+    </Link>
+  );
+}
+
 function RequestStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     nouvelle: { label: "Nouvelle", cls: "bg-pending-bg text-pending-text" },
@@ -560,6 +664,7 @@ function InstallmentRow({
         {installment.paid ? (
           <p className="text-xs text-muted-foreground">
             Payé le {new Date(installment.paid.paidAt).toLocaleDateString("fr-FR")}
+            {installment.paid.paymentBatchId && " · versement groupé"}
           </p>
         ) : installment.late ? (
           <p className="text-xs font-semibold text-destructive">En retard</p>
@@ -595,6 +700,93 @@ function InstallmentRow({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function BatchPaymentForm({
+  rentAmount,
+  onSubmit,
+  onCancel,
+  busy,
+}: {
+  rentAmount: number;
+  onSubmit: (startPeriod: string, months: number, paidAt: string) => void;
+  onCancel?: () => void;
+  busy: boolean;
+}) {
+  const [startPeriod, setStartPeriod] = useState(() => new Date().toISOString().slice(0, 7));
+  const [months, setMonths] = useState("1");
+  const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const monthsNum = Number(months) || 0;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label" htmlFor="batchStart">
+            Mois de départ
+          </label>
+          <input
+            id="batchStart"
+            type="month"
+            value={startPeriod}
+            onChange={(e) => setStartPeriod(e.target.value)}
+            className={dateInputCls}
+          />
+        </div>
+        <div>
+          <label className="field-label" htmlFor="batchMonths">
+            Nombre de mois
+          </label>
+          <input
+            id="batchMonths"
+            type="number"
+            min={1}
+            max={36}
+            value={months}
+            onChange={(e) => setMonths(e.target.value)}
+            className={dateInputCls}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="field-label" htmlFor="batchPaidAt">
+          Date de paiement
+        </label>
+        <input
+          id="batchPaidAt"
+          type="date"
+          value={paidAt}
+          onChange={(e) => setPaidAt(e.target.value)}
+          className={dateInputCls}
+        />
+      </div>
+      {monthsNum > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {monthsNum} mois · <Price amount={rentAmount * monthsNum} size="sm" />
+        </p>
+      )}
+      <div className="flex gap-2">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-xs font-bold"
+          >
+            Annuler
+          </button>
+        )}
+        <Button
+          type="button"
+          className="flex-1"
+          disabled={busy || !startPeriod || monthsNum < 1}
+          onClick={() => onSubmit(`${startPeriod}-01`, monthsNum, paidAt)}
+        >
+          {busy ? "..." : "Déclarer le versement"}
+        </Button>
+      </div>
     </div>
   );
 }

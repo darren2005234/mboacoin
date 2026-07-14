@@ -28,6 +28,10 @@ async function main() {
   // Convention de fichier Next.js (app/apple-icon.png) : génère automatiquement
   // le <link rel="apple-touch-icon">.
   await renderPng(180, path.join(ROOT, "app", "apple-icon.png"));
+
+  // Convention de fichier Next.js (app/icon.png) : génère automatiquement le favicon,
+  // remplaçant le favicon.ico par défaut de Create Next App (sharp ne produit pas de .ico).
+  await renderPng(48, path.join(ROOT, "app", "icon.png"));
 }
 
 main().catch((error) => {

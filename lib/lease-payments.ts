@@ -9,6 +9,7 @@ export interface LeasePayment {
   method: string;
   receiptNumber: string;
   createdAt: string;
+  paymentBatchId: string | null;
 }
 
 function mapPaymentRow(row: {
@@ -19,6 +20,7 @@ function mapPaymentRow(row: {
   method: string;
   receipt_number: string;
   created_at: string;
+  payment_batch_id: string | null;
 }): LeasePayment {
   return {
     id: row.id,
@@ -28,10 +30,11 @@ function mapPaymentRow(row: {
     method: row.method,
     receiptNumber: row.receipt_number,
     createdAt: row.created_at,
+    paymentBatchId: row.payment_batch_id,
   };
 }
 
-const PAYMENT_SELECT = "id, period, amount, paid_at, method, receipt_number, created_at";
+const PAYMENT_SELECT = "id, period, amount, paid_at, method, receipt_number, created_at, payment_batch_id";
 
 /** Paiements d'un bail (RLS scope déjà bailleur/locataire/admin du bail). */
 export async function getLeasePayments(leaseId: string): Promise<LeasePayment[]> {
@@ -68,6 +71,38 @@ export async function declarePayment(
   return {};
 }
 
+export interface DeclarePaymentBatchInput {
+  leaseId: string;
+  /** N'importe quel jour du mois de départ ; tronqué au premier du mois côté serveur. */
+  startPeriod: string;
+  months: number;
+  paidAt: string;
+}
+
+/**
+ * Déclare un versement couvrant plusieurs mois d'un coup (bailleur
+ * uniquement) : une ligne par mois dans lease_payments, reliées par un
+ * payment_batch_id commun. Utilisé à la fois pour un bail en mode avance
+ * (où ça définit/prolonge end_date) et pour un versement ponctuel en mode
+ * mensuel (où ça n'a aucun effet sur end_date). Toute la validation (période
+ * déjà payée, hors bornes du bail) est faite côté SQL — les messages
+ * d'erreur remontent tels quels.
+ */
+export async function declarePaymentBatch(
+  input: DeclarePaymentBatchInput
+): Promise<{ batchId?: string; error?: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("declare_payment_batch", {
+    p_lease_id: input.leaseId,
+    p_start_period: input.startPeriod,
+    p_months: input.months,
+    p_paid_at: input.paidAt,
+  });
+
+  if (error) return { error: error.message || "Impossible de déclarer ce versement." };
+  return { batchId: data as string };
+}
+
 export interface DueInstallment {
   period: string;
   dueDate: string;
@@ -93,7 +128,15 @@ export async function getLeaseSchedule(lease: {
   const payments = await getLeasePayments(lease.id);
   const paidByPeriod = new Map(payments.map((p) => [p.period, p]));
 
-  const until = lease.endDate && new Date(lease.endDate) < new Date() ? new Date(lease.endDate) : new Date();
+  let until = lease.endDate && new Date(lease.endDate) < new Date() ? new Date(lease.endDate) : new Date();
+  // Un versement groupé peut couvrir des mois futurs (point 7) : ils doivent
+  // apparaître dans le planning dès la déclaration, sans attendre que le
+  // mois arrive, pour que leur quittance soit immédiatement accessible.
+  const maxPaidPeriod = payments.reduce((max, p) => (p.period > max ? p.period : max), "");
+  if (maxPaidPeriod) {
+    const maxPaidDate = new Date(Number(maxPaidPeriod.slice(0, 4)), Number(maxPaidPeriod.slice(5, 7)) - 1, 1);
+    if (maxPaidDate > until) until = maxPaidDate;
+  }
   const dueDates = generateDueDates(lease.startDate, lease.paymentPeriod, until);
   const today = todayIso();
 
@@ -108,7 +151,13 @@ export async function getLeaseSchedule(lease: {
 
 /** À jour / en retard pour une liste de baux, en une seule requête (pas de N+1). */
 export async function getLeasesLateStatus(
-  leases: { id: string; startDate: string; paymentDay: number | null; paymentPeriod: string }[]
+  leases: {
+    id: string;
+    startDate: string;
+    paymentDay: number | null;
+    paymentPeriod: string;
+    paymentMode: string;
+  }[]
 ): Promise<Record<string, boolean>> {
   const ids = leases.map((l) => l.id);
   const result: Record<string, boolean> = {};
@@ -121,6 +170,12 @@ export async function getLeasesLateStatus(
   const today = todayIso();
 
   for (const lease of leases) {
+    // Un bail en mode avance n'a jamais de retard : soit la période est
+    // couverte, soit le bail arrive à son terme (voir la bannière dédiée).
+    if (lease.paymentMode === "avance") {
+      result[lease.id] = false;
+      continue;
+    }
     const dueDates = generateDueDates(lease.startDate, lease.paymentPeriod);
     result[lease.id] = dueDates.some((d) => {
       if (paidSet.has(`${lease.id}:${d}`)) return false;

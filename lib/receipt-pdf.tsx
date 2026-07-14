@@ -1,4 +1,7 @@
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import QRCode from "qrcode";
+import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -11,10 +14,21 @@ export interface ReceiptData {
   paidAt: string; // date ISO
   method: string;
   issuedAt: Date;
+  verificationUrl: string;
+  /** Nombre de mois du même versement groupé, si cette quittance en fait partie. */
+  batchMonthCount: number | null;
 }
+
+// Réutilise le PNG déjà rasterisé depuis lib/logo-svg.mjs par
+// scripts/generate-pwa-icons.mjs — pas de rasterisation à la demande ici
+// (éviterait d'ajouter sharp aux dépendances de production pour ce seul besoin),
+// et surtout pas de logo redessiné à la main.
+const LOGO_PNG = readFileSync(path.join(process.cwd(), "public", "icons", "icon-512.png"));
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 11, color: "#1f2937" },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 },
+  logo: { width: 40, height: 40 },
   title: { fontSize: 18, fontWeight: 700, marginBottom: 4 },
   subtitle: { fontSize: 10, color: "#6b7280", marginBottom: 24 },
   section: { marginBottom: 16 },
@@ -32,6 +46,9 @@ const styles = StyleSheet.create({
   footer: { marginTop: 32, borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingTop: 12 },
   mention: { fontSize: 9, color: "#6b7280", marginBottom: 4 },
   disclaimer: { fontSize: 9, color: "#92400e", marginTop: 8 },
+  verification: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 },
+  qr: { width: 64, height: 64 },
+  verificationCaption: { fontSize: 8, color: "#6b7280", flex: 1 },
 });
 
 function formatFCFA(amount: number): string {
@@ -57,12 +74,18 @@ function methodLabel(method: string): string {
   return method === "mobile_money" ? "Payé via MboaCoin (mobile money)" : "Déclaré par le bailleur";
 }
 
-export function ReceiptDocument({ data }: { data: ReceiptData }) {
+export function ReceiptDocument({ data, qrCode }: { data: ReceiptData; qrCode: Buffer }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.title}>Quittance de loyer</Text>
-        <Text style={styles.subtitle}>N° {data.receiptNumber}</Text>
+        <View style={styles.header}>
+          <Image src={LOGO_PNG} style={styles.logo} />
+          <View>
+            <Text style={styles.title}>Quittance de loyer</Text>
+            <Text style={{ ...styles.subtitle, marginBottom: 0 }}>N° {data.receiptNumber}</Text>
+          </View>
+        </View>
+        <View style={{ height: 20 }} />
 
         <View style={styles.section}>
           <View style={styles.row}>
@@ -82,6 +105,9 @@ export function ReceiptDocument({ data }: { data: ReceiptData }) {
           </Text>
           <Text style={styles.label}>Période couverte</Text>
           <Text style={styles.value}>{formatPeriodLabel(data.period)}</Text>
+          {data.batchMonthCount ? (
+            <Text style={styles.mention}>Fait partie d&apos;un versement de {data.batchMonthCount} mois.</Text>
+          ) : null}
         </View>
 
         <View style={styles.amountBox}>
@@ -116,6 +142,13 @@ export function ReceiptDocument({ data }: { data: ReceiptData }) {
               transite pas par la plateforme MboaCoin, celle-ci ne peut pas en garantir la véracité.
             </Text>
           )}
+
+          <View style={styles.verification}>
+            <Image src={qrCode} style={styles.qr} />
+            <Text style={styles.verificationCaption}>
+              Scannez pour vérifier l&apos;authenticité de ce document.
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>
@@ -123,5 +156,6 @@ export function ReceiptDocument({ data }: { data: ReceiptData }) {
 }
 
 export async function renderReceiptPdf(data: ReceiptData): Promise<Buffer> {
-  return renderToBuffer(<ReceiptDocument data={data} />);
+  const qrCode = await QRCode.toBuffer(data.verificationUrl, { type: "png", margin: 1, width: 256 });
+  return renderToBuffer(<ReceiptDocument data={data} qrCode={qrCode} />);
 }

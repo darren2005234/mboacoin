@@ -67,6 +67,21 @@ export default function MyLeasesPage() {
         </button>
       </div>
 
+      {leases.some((l) => l.paymentMode === "avance") && (
+        <Link
+          href="/my-leases/coverage"
+          className="mx-5 mb-4 flex items-center justify-between gap-2 rounded-2xl border border-border bg-card p-3 shadow-card"
+        >
+          <div className="flex items-center gap-2">
+            <span className="icon-badge size-9">
+              <Icon name="event_upcoming" size={18} filled={false} />
+            </span>
+            <p className="text-sm font-bold">Couvertures à renouveler</p>
+          </div>
+          <Icon name="chevron_right" size={18} className="text-muted-foreground" />
+        </Link>
+      )}
+
       {loading ? (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">Chargement...</p>
       ) : leases.length === 0 ? (
@@ -97,7 +112,7 @@ export default function MyLeasesPage() {
                     <div className="mt-1 flex items-center gap-2">
                       <Price amount={l.rentAmount} suffix={priceSuffixFor(l.paymentPeriod)} size="sm" />
                       <StatusBadge status={l.status} />
-                      {l.status === "actif" && (
+                      {l.status === "actif" && l.paymentMode !== "avance" && (
                         <span
                           className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
                             lateStatus[l.id] ? "bg-destructive/10 text-destructive" : "bg-ok-bg text-ok-text"
@@ -112,15 +127,25 @@ export default function MyLeasesPage() {
                             remaining < 0 ? "bg-destructive/10 text-destructive" : "bg-pending-bg text-pending-text"
                           }`}
                         >
-                          {remaining < 0 ? "Échéance dépassée" : "Échéance proche"}
+                          {l.paymentMode === "avance"
+                            ? remaining < 0
+                              ? "Échue"
+                              : "Bientôt échue"
+                            : remaining < 0
+                              ? "Échéance dépassée"
+                              : "Échéance proche"}
                         </span>
                       )}
                     </div>
                     {l.status === "actif" && (
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {dueDate
-                          ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}`
-                          : "Facturation quotidienne"}
+                        {l.paymentMode === "avance"
+                          ? l.endDate
+                            ? `Couvert jusqu'au ${new Date(l.endDate).toLocaleDateString("fr-FR")}`
+                            : "Aucune période payée pour l'instant"
+                          : dueDate
+                            ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}`
+                            : "Facturation quotidienne"}
                       </p>
                     )}
                   </div>

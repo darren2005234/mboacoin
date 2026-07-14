@@ -28,8 +28,15 @@ export default function NewLeasePage() {
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [paymentDay, setPaymentDay] = useState("");
   const [paymentPeriod, setPaymentPeriod] = useState<string>("mensuel");
+  const [paymentMode, setPaymentMode] = useState<string>("mensuel");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function onPeriodChange(period: string) {
+    setPaymentPeriod(period);
+    // L'avance n'a de sens que pour un loyer mensuel (couverture en mois).
+    if (period !== "mensuel") setPaymentMode("mensuel");
+  }
 
   useEffect(() => {
     if (!ready) return;
@@ -94,6 +101,7 @@ export default function NewLeasePage() {
       advanceAmount: advanceAmount ? Number(advanceAmount) : null,
       paymentDay: paymentDay ? Number(paymentDay) : null,
       paymentPeriod,
+      paymentMode,
     });
 
     if (result.error) {
@@ -173,32 +181,36 @@ export default function NewLeasePage() {
               className={inputCls}
             />
           </div>
-          <div>
-            <label htmlFor="duration" className="field-label">
-              Durée (mois)
-            </label>
-            <input
-              id="duration"
-              type="number"
-              min={1}
-              value={durationMonths}
-              onChange={(e) => setDurationMonths(e.target.value)}
-              disabled={indeterminate}
-              placeholder="Ex : 12"
-              className={inputCls}
-            />
-          </div>
+          {paymentMode !== "avance" && (
+            <div>
+              <label htmlFor="duration" className="field-label">
+                Durée (mois)
+              </label>
+              <input
+                id="duration"
+                type="number"
+                min={1}
+                value={durationMonths}
+                onChange={(e) => setDurationMonths(e.target.value)}
+                disabled={indeterminate}
+                placeholder="Ex : 12"
+                className={inputCls}
+              />
+            </div>
+          )}
         </div>
 
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={indeterminate}
-            onChange={(e) => setIndeterminate(e.target.checked)}
-            className="size-4 rounded border-input"
-          />
-          Durée indéterminée
-        </label>
+        {paymentMode !== "avance" && (
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={indeterminate}
+              onChange={(e) => setIndeterminate(e.target.checked)}
+              className="size-4 rounded border-input"
+            />
+            Durée indéterminée
+          </label>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -221,7 +233,7 @@ export default function NewLeasePage() {
             <select
               id="period"
               value={paymentPeriod}
-              onChange={(e) => setPaymentPeriod(e.target.value)}
+              onChange={(e) => onPeriodChange(e.target.value)}
               className={inputCls}
             >
               {PRICE_PERIODS.map((p) => (
@@ -232,6 +244,41 @@ export default function NewLeasePage() {
             </select>
           </div>
         </div>
+
+        {paymentPeriod === "mensuel" && (
+          <div>
+            <label className="field-label">
+              Mode de paiement<span className="text-destructive"> *</span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMode("mensuel")}
+                className={`flex-1 rounded-full px-3 py-2.5 text-sm font-bold ${
+                  paymentMode === "mensuel" ? "bg-primary text-primary-foreground" : "bg-secondary"
+                }`}
+              >
+                Mensuel
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMode("avance")}
+                className={`flex-1 rounded-full px-3 py-2.5 text-sm font-bold ${
+                  paymentMode === "avance" ? "bg-primary text-primary-foreground" : "bg-secondary"
+                }`}
+              >
+                Avance
+              </button>
+            </div>
+            {paymentMode === "avance" && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                La durée sera définie par les versements que vous déclarerez une fois le bail actif —
+                aucune échéance mensuelle, aucun retard : le bail est couvert jusqu&apos;à la fin de la
+                période payée.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>

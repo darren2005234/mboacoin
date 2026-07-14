@@ -25,6 +25,7 @@ interface LeaseDetailRow {
   advance_amount: number | null;
   payment_day: number | null;
   payment_period: string;
+  payment_mode: string;
   listing: { title: string; image_url: string | null; city: string; neighborhood: string | null } | { title: string; image_url: string | null; city: string; neighborhood: string | null }[] | null;
   landlord: { full_name: string | null; avatar_url: string | null; verification: string } | { full_name: string | null; avatar_url: string | null; verification: string }[] | null;
 }
@@ -47,7 +48,7 @@ export default async function LeaseDetailPage({
   const { data } = await supabase
     .from("leases")
     .select(
-      "id, listing_id, landlord_id, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, listing:listings(title, image_url, city, neighborhood), landlord:profiles!landlord_id(full_name, avatar_url, verification)"
+      "id, listing_id, landlord_id, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, payment_mode, listing:listings(title, image_url, city, neighborhood), landlord:profiles!landlord_id(full_name, avatar_url, verification)"
     )
     .eq("id", id)
     .eq("tenant_id", user.id)
@@ -63,7 +64,7 @@ export default async function LeaseDetailPage({
 
   const { data: paymentRows } = await supabase
     .from("lease_payments")
-    .select("id, period, amount, paid_at, receipt_number")
+    .select("id, period, amount, paid_at, receipt_number, payment_batch_id")
     .eq("lease_id", row.id)
     .order("period", { ascending: false });
   const payments = paymentRows ?? [];
@@ -71,10 +72,14 @@ export default async function LeaseDetailPage({
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const paidPeriods = new Set(payments.map((p) => p.period));
-  const isLate = generateDueDates(row.start_date, row.payment_period).some((period) => {
-    if (paidPeriods.has(period)) return false;
-    return dueDateForPeriod(period, row.payment_day, row.start_date) < today;
-  });
+  // En mode avance, il n'y a jamais de retard : soit la période est
+  // couverte, soit le bail arrive à son terme (voir la bannière dédiée).
+  const isLate =
+    row.payment_mode !== "avance" &&
+    generateDueDates(row.start_date, row.payment_period).some((period) => {
+      if (paidPeriods.has(period)) return false;
+      return dueDateForPeriod(period, row.payment_day, row.start_date) < today;
+    });
 
   const { data: amendmentRow } = await supabase
     .from("lease_amendments")
@@ -89,6 +94,13 @@ export default async function LeaseDetailPage({
     .eq("lease_id", row.id);
   const requests = requestRows ?? [];
   const openRequests = requests.filter((r) => r.status === "nouvelle" || r.status === "en_cours").length;
+
+  const { data: inspectionRows } = await supabase
+    .from("etat_des_lieux")
+    .select("type, status")
+    .eq("lease_id", row.id);
+  const inspectionEntree = (inspectionRows ?? []).find((i) => i.type === "entree") ?? null;
+  const inspectionSortie = (inspectionRows ?? []).find((i) => i.type === "sortie") ?? null;
 
   const { data: documentRows } = await supabase
     .from("lease_documents")
@@ -148,6 +160,9 @@ export default async function LeaseDetailPage({
             {row.deposit_amount ? <Info label="Caution" value={<Price amount={row.deposit_amount} size="sm" />} /> : null}
             {row.advance_amount ? <Info label="Avance" value={<Price amount={row.advance_amount} size="sm" />} /> : null}
             {row.payment_day ? <Info label="Jour de paiement" value={String(row.payment_day)} /> : null}
+            {row.payment_period === "mensuel" && (
+              <Info label="Mode de paiement" value={row.payment_mode === "avance" ? "Avance" : "Mensuel"} />
+            )}
           </div>
         </div>
 
@@ -174,18 +189,31 @@ export default async function LeaseDetailPage({
           }
         />
 
-        {/* Prochaine échéance */}
+        {/* Prochaine échéance / couverture */}
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card">
           <span className="icon-badge size-11">
             <Icon name="event" size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">
-              {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {row.payment_period === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
-            </p>
+            {row.payment_mode === "avance" ? (
+              <>
+                <p className="text-sm font-bold">
+                  {row.end_date
+                    ? `Loyer payé jusqu'au ${new Date(row.end_date).toLocaleDateString("fr-FR")}`
+                    : "Aucune période payée pour l'instant"}
+                </p>
+                <p className="text-xs text-muted-foreground">Paiement d&apos;avance</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold">
+                  {dueDate ? `Prochain loyer dû le ${dueDate.toLocaleDateString("fr-FR")}` : "Facturation quotidienne"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {row.payment_period === "journalier" ? "Périodicité journalière" : "Périodicité mensuelle"}
+                </p>
+              </>
+            )}
           </div>
           {isLate && (
             <span className="rounded-md bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
@@ -209,6 +237,7 @@ export default async function LeaseDetailPage({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Payé le {new Date(p.paid_at).toLocaleDateString("fr-FR")} · <Price amount={p.amount} size="sm" />
+                      {p.payment_batch_id && " · versement groupé"}
                     </p>
                   </div>
                   <a
@@ -244,6 +273,27 @@ export default async function LeaseDetailPage({
           <Icon name="chevron_right" size={20} className="text-muted-foreground" />
         </Link>
 
+        {/* État des lieux */}
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
+          <p className="text-sm font-bold">État des lieux</p>
+          <Link
+            href={`/my-lease/${row.id}/inspections/entree`}
+            className="flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2.5 text-xs font-bold"
+          >
+            Entrée
+            <InspectionStatusBadge status={inspectionEntree?.status ?? null} />
+          </Link>
+          {inspectionSortie && (
+            <Link
+              href={`/my-lease/${row.id}/inspections/sortie`}
+              className="flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2.5 text-xs font-bold"
+            >
+              Sortie
+              <InspectionStatusBadge status={inspectionSortie.status} />
+            </Link>
+          )}
+        </div>
+
         {/* Contrat de bail */}
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
           <p className="text-sm font-bold">Contrat de bail</p>
@@ -272,4 +322,15 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
       <p className="font-bold">{value}</p>
     </div>
   );
+}
+
+function InspectionStatusBadge({ status }: { status: string | null }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    brouillon: { label: "À venir", cls: "bg-card text-muted-foreground" },
+    soumis: { label: "À valider", cls: "bg-pending-bg text-pending-text" },
+    conteste: { label: "Contesté", cls: "bg-destructive/10 text-destructive" },
+    valide: { label: "Validé", cls: "bg-ok-bg text-ok-text" },
+  };
+  const s = status ? map[status] ?? { label: status, cls: "bg-card text-muted-foreground" } : { label: "Pas encore créé", cls: "bg-card text-muted-foreground" };
+  return <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold ${s.cls}`}>{s.label}</span>;
 }

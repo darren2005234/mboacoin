@@ -6,12 +6,12 @@ import { ArrowLeft, Search } from "lucide-react";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { SampleNote } from "@/components/mboacoin/sample-note";
-import type { RecentSearchEvent, TopSearchTerm } from "@/lib/admin-analytics";
+import type { TopSearchTerm } from "@/lib/admin-analytics";
 import type { BudgetBucket } from "@/lib/budget-buckets";
 import {
   getDemandByZone,
   getMarketBudgetDistribution,
-  getMarketZeroResultSearches,
+  getMarketUnmetDemand,
   getAveragePricesByZone,
   getSearchTrend,
   type MarketZone,
@@ -19,17 +19,7 @@ import {
   type MonthlyTrendPoint,
 } from "@/lib/market-data";
 
-function summarizeFilters(s: RecentSearchEvent): string {
-  const parts: string[] = [];
-  if (s.propertyType) parts.push(s.propertyType);
-  if (s.minPrice || s.maxPrice) parts.push(`${s.minPrice ?? "?"}–${s.maxPrice ?? "?"} FCFA`);
-  if (s.minRooms) parts.push(`≥ ${s.minRooms} pièce(s)`);
-  if (s.minBedrooms) parts.push(`≥ ${s.minBedrooms} chambre(s)`);
-  if (s.furnishing) parts.push(s.furnishing);
-  if (s.carAccess) parts.push("Accès voiture");
-  if (s.verifiedOnly) parts.push("Vérifiés uniquement");
-  return parts.length > 0 ? parts.join(" · ") : "Aucun filtre";
-}
+const INSUFFICIENT_SAMPLE_MESSAGE = "Données insuffisantes pour cette zone.";
 
 function Bar({ label, count, max }: { label: string; count: number; max: number }) {
   return (
@@ -50,27 +40,27 @@ export function MarketDataView() {
   const [loading, setLoading] = useState(true);
   const [terms, setTerms] = useState<{ terms: TopSearchTerm[]; sampleSize: number }>({ terms: [], sampleSize: 0 });
   const [budget, setBudget] = useState<{ buckets: BudgetBucket[]; sampleSize: number }>({ buckets: [], sampleSize: 0 });
-  const [zeroResult, setZeroResult] = useState<RecentSearchEvent[]>([]);
+  const [unmet, setUnmet] = useState<{ terms: TopSearchTerm[]; sampleSize: number }>({ terms: [], sampleSize: 0 });
   const [prices, setPrices] = useState<{ groups: PriceGroup[]; sampleSize: number }>({ groups: [], sampleSize: 0 });
-  const [trend, setTrend] = useState<{ points: MonthlyTrendPoint[]; hasEnoughHistory: boolean }>({
+  const [trend, setTrend] = useState<{ points: MonthlyTrendPoint[]; totalSearches: number }>({
     points: [],
-    hasEnoughHistory: false,
+    totalSearches: 0,
   });
 
   useEffect(() => {
     const zone: MarketZone = city.trim() ? { city: city.trim() } : {};
     setLoading(true);
     (async () => {
-      const [t, b, z, p, tr] = await Promise.all([
+      const [t, b, u, p, tr] = await Promise.all([
         getDemandByZone(zone),
         getMarketBudgetDistribution(zone),
-        getMarketZeroResultSearches(zone),
+        getMarketUnmetDemand(zone),
         getAveragePricesByZone(zone),
         getSearchTrend(zone),
       ]);
       setTerms(t);
       setBudget(b);
-      setZeroResult(z);
+      setUnmet(u);
       setPrices(p);
       setTrend(tr);
       setLoading(false);
@@ -80,6 +70,7 @@ export function MarketDataView() {
   const maxTermCount = Math.max(1, ...terms.terms.map((t) => t.count));
   const maxBucketCount = Math.max(1, ...budget.buckets.map((b) => b.count));
   const maxTrendCount = Math.max(1, ...trend.points.map((p) => p.searchCount));
+  const maxUnmetCount = Math.max(1, ...unmet.terms.map((t) => t.count));
 
   return (
     <div className="flex flex-col gap-6 pb-8">
@@ -110,16 +101,15 @@ export function MarketDataView() {
               <Icon name="search_off" size={18} className="text-destructive" />
               <h2 className="text-base font-extrabold leading-tight">Recherches sans résultat</h2>
             </div>
-            <SampleNote size={zeroResult.length} />
-            {zeroResult.length === 0 ? (
+            <SampleNote size={unmet.sampleSize} />
+            {unmet.sampleSize === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune recherche sans résultat sur cette zone.</p>
+            ) : unmet.terms.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{INSUFFICIENT_SAMPLE_MESSAGE}</p>
             ) : (
-              <div className="space-y-2">
-                {zeroResult.map((e) => (
-                  <div key={e.id} className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                    <p className="text-sm font-bold">{e.keywords ? `« ${e.keywords} »` : "(sans mot-clé)"}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{summarizeFilters(e)}</p>
-                  </div>
+              <div className="space-y-1.5">
+                {unmet.terms.map((t) => (
+                  <Bar key={t.term} label={t.term} count={t.count} max={maxUnmetCount} />
                 ))}
               </div>
             )}
@@ -129,8 +119,10 @@ export function MarketDataView() {
           <section className="space-y-3 px-5">
             <h2 className="text-base font-extrabold leading-tight">Demande par zone</h2>
             <SampleNote size={terms.sampleSize} />
-            {terms.terms.length === 0 ? (
+            {terms.sampleSize === 0 ? (
               <p className="text-sm text-muted-foreground">Pas encore de données.</p>
+            ) : terms.terms.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{INSUFFICIENT_SAMPLE_MESSAGE}</p>
             ) : (
               <div className="space-y-1.5">
                 {terms.terms.map((t) => (
@@ -146,6 +138,8 @@ export function MarketDataView() {
             <SampleNote size={budget.sampleSize} />
             {budget.sampleSize === 0 ? (
               <p className="text-sm text-muted-foreground">Pas encore de données.</p>
+            ) : budget.buckets.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{INSUFFICIENT_SAMPLE_MESSAGE}</p>
             ) : (
               <div className="space-y-1.5">
                 {budget.buckets.map((b) => (
@@ -159,8 +153,10 @@ export function MarketDataView() {
           <section className="space-y-3 px-5">
             <h2 className="text-base font-extrabold leading-tight">Prix moyens du marché</h2>
             <SampleNote size={prices.sampleSize} unit="annonce" />
-            {prices.groups.length === 0 ? (
+            {prices.sampleSize === 0 ? (
               <p className="text-sm text-muted-foreground">Pas encore de données.</p>
+            ) : prices.groups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{INSUFFICIENT_SAMPLE_MESSAGE}</p>
             ) : (
               <div className="space-y-2">
                 {prices.groups.map((g) => (
@@ -179,7 +175,11 @@ export function MarketDataView() {
           {/* Évolution dans le temps */}
           <section className="space-y-3 px-5">
             <h2 className="text-base font-extrabold leading-tight">Évolution dans le temps</h2>
-            {!trend.hasEnoughHistory ? (
+            {trend.totalSearches === 0 ? (
+              <p className="text-sm text-muted-foreground">Pas encore de données.</p>
+            ) : trend.points.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{INSUFFICIENT_SAMPLE_MESSAGE}</p>
+            ) : trend.points.length < 2 ? (
               <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                 Historique en constitution, les tendances apparaîtront au fil des semaines.
               </p>

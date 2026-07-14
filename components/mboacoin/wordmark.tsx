@@ -1,4 +1,4 @@
-import { Icon } from "@/components/mboacoin/icon";
+import { Logo } from "@/components/mboacoin/logo";
 import { cn } from "@/lib/utils";
 
 interface WordmarkProps {
@@ -6,16 +6,13 @@ interface WordmarkProps {
   className?: string;
 }
 
-/** Logo MboaCoin : pastille teal avec une maison, « Mboa » en ink, « Coin » en teal. */
+/** Logo MboaCoin (sceau doré inclus) accompagné du texte « Mboa » en ink, « Coin » en teal. */
 export function Wordmark({ size = "md", className }: WordmarkProps) {
-  const box = size === "sm" ? "size-8" : "size-10";
+  const logoSize = size === "sm" ? 32 : 40;
   const text = size === "sm" ? "text-base" : "text-lg";
-  const iconSize = size === "sm" ? 18 : 22;
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <span className={cn("grid place-items-center rounded-xl bg-primary text-primary-foreground", box)}>
-        <Icon name="home" size={iconSize} />
-      </span>
+      <Logo size={logoSize} />
       <span className={cn("font-extrabold tracking-tight", text)}>
         <span className="text-foreground">Mboa</span>
         <span className="text-primary">Coin</span>

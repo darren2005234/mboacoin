@@ -25,7 +25,9 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 // plus lease_payment_due_soon/lease_payment_late créés par la tâche planifiée
 // supabase/functions/rent-reminders (chantier NOTIFICATIONS-3), plus les
 // visit_* créés par supabase/migrations/20260713100000_visits.sql (chantier
-// TRANS-1a).
+// TRANS-1a), plus les etat_des_lieux_* créés par
+// supabase/migrations/20260714110000_property_inspections.sql (chantier
+// ÉTAT DES LIEUX).
 // Volontairement absents (changement mineur / confirmation de sa propre action /
 // purement informatif) : lease_resiliated, lease_ended, lease_amendment_accepted,
 // lease_amendment_refused, lease_payment_declared, lease_document_added,
@@ -44,6 +46,7 @@ const PUSHABLE_TYPES = new Set([
   "listing_verification_approved",
   "listing_verification_rejected",
   "lease_payment_due_soon",
+  "lease_coverage_ending_soon",
   "lease_payment_late",
   "visit_requested",
   "visit_slot_proposed",
@@ -53,6 +56,10 @@ const PUSHABLE_TYPES = new Set([
   "visit_completed",
   "visit_expired",
   "visit_reminder",
+  "etat_des_lieux_submitted",
+  "etat_des_lieux_validated",
+  "etat_des_lieux_disputed",
+  "etat_des_lieux_sortie_available",
 ]);
 
 interface NotificationRecord {

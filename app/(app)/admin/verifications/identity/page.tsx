@@ -13,6 +13,16 @@ import {
   rejectVerification,
   type PendingVerification,
 } from "@/lib/admin-verification";
+import { Lightbox } from "@/components/mboacoin/lightbox";
+
+/** Photos (hors PDF) d'une demande, dans l'ordre affiché : sert de groupe pour la visionneuse. */
+function imagesFor(item: PendingVerification): string[] {
+  const list: string[] = [];
+  if (item.documentUrl && !item.isPdf) list.push(item.documentUrl);
+  if (item.selfieUrl) list.push(item.selfieUrl);
+  if (item.entityDocumentUrl && !item.entityIsPdf) list.push(item.entityDocumentUrl);
+  return list;
+}
 
 export default function AdminIdentityVerificationsPage() {
   const [items, setItems] = useState<PendingVerification[]>([]);
@@ -20,6 +30,7 @@ export default function AdminIdentityVerificationsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [zoom, setZoom] = useState<{ images: string[]; index: number } | null>(null);
 
   async function refresh() {
     setItems(await getPendingVerifications());
@@ -87,15 +98,35 @@ export default function AdminIdentityVerificationsPage() {
                     <span className="text-xs text-muted-foreground">S&apos;ouvre dans un nouvel onglet</span>
                   </a>
                 ) : (
-                  <Image src={item.documentUrl} alt="Document" fill className="object-contain" sizes="400px" unoptimized />
+                  <button
+                    type="button"
+                    aria-label="Agrandir le document"
+                    className="absolute inset-0"
+                    onClick={() => {
+                      const images = imagesFor(item);
+                      setZoom({ images, index: images.indexOf(item.documentUrl!) });
+                    }}
+                  >
+                    <Image src={item.documentUrl} alt="Document" fill className="object-contain" sizes="400px" unoptimized />
+                  </button>
                 )}
               </div>
               {/* Selfie en direct, pour comparer les visages */}
               {item.selfieUrl && (
                 <div className="border-t border-border">
                   <div className="relative h-56 bg-secondary">
-                    <Image src={item.selfieUrl} alt="Photo en direct" fill className="object-contain" sizes="400px" unoptimized />
-                    <span className="absolute left-2 top-2 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                    <button
+                      type="button"
+                      aria-label="Agrandir la photo en direct"
+                      className="absolute inset-0"
+                      onClick={() => {
+                        const images = imagesFor(item);
+                        setZoom({ images, index: images.indexOf(item.selfieUrl!) });
+                      }}
+                    >
+                      <Image src={item.selfieUrl} alt="Photo en direct" fill className="object-contain" sizes="400px" unoptimized />
+                    </button>
+                    <span className="absolute left-2 top-2 z-10 rounded-md bg-foreground/70 px-2 py-0.5 text-[10px] font-bold text-white">
                       Photo en direct
                     </span>
                   </div>
@@ -127,7 +158,17 @@ export default function AdminIdentityVerificationsPage() {
                         <span className="text-xs text-muted-foreground">S&apos;ouvre dans un nouvel onglet</span>
                       </a>
                     ) : (
-                      <Image src={item.entityDocumentUrl} alt="Document de l'entité" fill className="object-contain" sizes="400px" unoptimized />
+                      <button
+                        type="button"
+                        aria-label="Agrandir le document de l'entité"
+                        className="absolute inset-0"
+                        onClick={() => {
+                          const images = imagesFor(item);
+                          setZoom({ images, index: images.indexOf(item.entityDocumentUrl!) });
+                        }}
+                      >
+                        <Image src={item.entityDocumentUrl} alt="Document de l'entité" fill className="object-contain" sizes="400px" unoptimized />
+                      </button>
                     )}
                   </div>
                   {item.entityDocumentType && (
@@ -193,6 +234,10 @@ export default function AdminIdentityVerificationsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {zoom && (
+        <Lightbox images={zoom.images} startIndex={zoom.index} onClose={() => setZoom(null)} unoptimized />
       )}
     </div>
   );

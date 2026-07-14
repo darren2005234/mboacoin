@@ -9,6 +9,8 @@ interface PaymentRow {
   paid_at: string;
   method: string;
   receipt_number: string;
+  verification_token: string;
+  payment_batch_id: string | null;
   lease:
     | {
         listing: { title: string; city: string; neighborhood: string | null; address_description: string | null } | { title: string; city: string; neighborhood: string | null; address_description: string | null }[] | null;
@@ -34,7 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ payment
   const { data } = await supabase
     .from("lease_payments")
     .select(
-      "period, amount, paid_at, method, receipt_number, lease:leases(listing:listings(title, city, neighborhood, address_description), landlord:profiles!landlord_id(full_name), tenant:profiles!tenant_id(full_name))"
+      "period, amount, paid_at, method, receipt_number, verification_token, payment_batch_id, lease:leases(listing:listings(title, city, neighborhood, address_description), landlord:profiles!landlord_id(full_name), tenant:profiles!tenant_id(full_name))"
     )
     .eq("id", paymentId)
     .maybeSingle();
@@ -46,6 +48,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ payment
   const listing = one(lease?.listing ?? null);
   const landlord = one(lease?.landlord ?? null);
   const tenant = one(lease?.tenant ?? null);
+
+  let batchMonthCount: number | null = null;
+  if (row.payment_batch_id) {
+    const { count } = await supabase
+      .from("lease_payments")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_batch_id", row.payment_batch_id);
+    batchMonthCount = count ?? null;
+  }
 
   const receiptData: ReceiptData = {
     receiptNumber: row.receipt_number,
@@ -60,6 +71,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ payment
     paidAt: row.paid_at,
     method: row.method,
     issuedAt: new Date(),
+    // Domaine canonique fixe, jamais dérivé de la requête (Host/X-Forwarded-Host
+    // sont manipulables, et une quittance doit rester vérifiable des années après
+    // sa génération, même si elle a été produite depuis un déploiement de preview).
+    verificationUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/verifier/${row.verification_token}`,
+    batchMonthCount,
   };
 
   const pdf = await renderReceiptPdf(receiptData);

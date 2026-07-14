@@ -52,6 +52,7 @@ export interface NewLeaseInput {
   advanceAmount: number | null;
   paymentDay: number | null;
   paymentPeriod: string;
+  paymentMode: string;
 }
 
 export interface CreateLeaseResult {
@@ -87,7 +88,11 @@ export async function createLease(input: NewLeaseInput): Promise<CreateLeaseResu
     return { error: "Ce logement n'est pas disponible pour la création d'un bail." };
   }
 
-  const endDate = input.durationMonths ? addMonths(input.startDate, input.durationMonths) : null;
+  // En mode avance, aucune durée fixe à la création : c'est la première
+  // déclaration de versement, une fois le bail actif, qui posera end_date
+  // (la couverture définit la durée, pas l'inverse).
+  const durationMonths = input.paymentMode === "avance" ? null : input.durationMonths;
+  const endDate = durationMonths ? addMonths(input.startDate, durationMonths) : null;
 
   const { data, error } = await supabase
     .from("leases")
@@ -96,13 +101,14 @@ export async function createLease(input: NewLeaseInput): Promise<CreateLeaseResu
       landlord_id: user.id,
       tenant_phone: input.tenantPhone,
       start_date: input.startDate,
-      duration_months: input.durationMonths,
+      duration_months: durationMonths,
       end_date: endDate,
       rent_amount: input.rentAmount,
       deposit_amount: input.depositAmount,
       advance_amount: input.advanceAmount,
       payment_day: input.paymentDay,
       payment_period: input.paymentPeriod,
+      payment_mode: input.paymentMode,
     })
     .select("id")
     .single();
@@ -133,13 +139,14 @@ export interface MyLease {
   advanceAmount: number | null;
   paymentDay: number | null;
   paymentPeriod: string;
+  paymentMode: string;
   createdAt: string;
   endReason: string | null;
   endedAt: string | null;
 }
 
 const MY_LEASE_SELECT =
-  "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, created_at, end_reason, ended_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name, verification)";
+  "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, payment_mode, created_at, end_reason, ended_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name, verification)";
 
 function mapMyLeaseRow(row: {
   id: string;
@@ -154,6 +161,7 @@ function mapMyLeaseRow(row: {
   advance_amount: number | null;
   payment_day: number | null;
   payment_period: string;
+  payment_mode: string;
   created_at: string;
   end_reason: string | null;
   ended_at: string | null;
@@ -183,6 +191,7 @@ function mapMyLeaseRow(row: {
     advanceAmount: row.advance_amount,
     paymentDay: row.payment_day,
     paymentPeriod: row.payment_period,
+    paymentMode: row.payment_mode,
     createdAt: row.created_at,
     endReason: row.end_reason,
     endedAt: row.ended_at,

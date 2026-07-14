@@ -5,12 +5,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   MAPPING TAILWIND
+   Tous les jetons qui changent entre clair et sombre pointent
+   vers une variable CSS definie plus bas dans :root et .dark.
+   Seule l'echelle de marque (teal) reste fixe : c'est une echelle,
+   pas un theme.
+   ============================================================ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -19,11 +27,13 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -40,6 +50,30 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Sceau de confiance : desormais theme-aware */
+  --color-seal: var(--seal);
+  --color-seal-bg: var(--seal-bg);
+  --color-seal-line: var(--seal-line);
+  --color-seal-text: var(--seal-text);
+
+  /* Statuts metier : desormais theme-aware */
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-text: var(--ok-text);
+  --color-pending: var(--pending);
+  --color-pending-bg: var(--pending-bg);
+  --color-pending-text: var(--pending-text);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-text: var(--info-text);
+  --color-fav: var(--fav);
+
+  /* Ombres : desormais theme-aware */
+  --shadow-card: var(--sh-card);
+  --shadow-btn: var(--sh-btn);
+  --shadow-soft: var(--sh-soft);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,8 +82,11 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
+
+/* ============================================================
+   ECHELLE DE MARQUE (fixe, identique dans les deux themes)
+   ============================================================ */
 @theme {
-  /* Échelle de marque (teal) */
   --color-brand-50: #e7f5f1;
   --color-brand-100: #c8e9e1;
   --color-brand-200: #9bd6c9;
@@ -60,31 +97,11 @@
   --color-brand-700: #0b5e4f;
   --color-brand-800: #0a4b40;
   --color-brand-900: #093e36;
-
-  /* Sceau de confiance (doré signature) */
-  --color-seal: #b7791f;
-  --color-seal-bg: #fbf1d9;
-  --color-seal-line: #e7d3a0;
-  --color-seal-text: #8a5e14;
-
-  /* Statuts métier */
-  --color-ok: #047857;
-  --color-ok-bg: #e7f6ef;
-  --color-ok-text: #065f46;
-  --color-pending: #b45309;
-  --color-pending-bg: #fcf3e6;
-  --color-pending-text: #92400e;
-  --color-info: #475569;
-  --color-info-bg: #eef2f5;
-  --color-info-text: #334155;
-  --color-fav: #e11d48;
-
-  /* Ombres */
-  --shadow-card: 0 1px 2px rgba(20, 32, 25, 0.04), 0 2px 8px rgba(20, 32, 25, 0.05);
-  --shadow-btn: 0 6px 16px -4px rgba(11, 94, 79, 0.35);
-  --shadow-soft: 0 12px 30px -10px rgba(20, 32, 25, 0.28);
 }
 
+/* ============================================================
+   THEME CLAIR
+   ============================================================ */
 :root {
   --background: #eaefec;
   --foreground: #142019;
@@ -104,56 +121,125 @@
   --border: #e2e8e5;
   --input: #dce4e0;
   --ring: #12a183;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+
+  /* Sceau de confiance (dore signature) */
+  --seal: #b7791f;
+  --seal-bg: #fbf1d9;
+  --seal-line: #e7d3a0;
+  --seal-text: #8a5e14;
+
+  /* Statuts metier */
+  --ok: #047857;
+  --ok-bg: #e7f6ef;
+  --ok-text: #065f46;
+  --pending: #b45309;
+  --pending-bg: #fcf3e6;
+  --pending-text: #92400e;
+  --info: #475569;
+  --info-bg: #eef2f5;
+  --info-text: #334155;
+  --fav: #e11d48;
+
+  /* Ombres */
+  --sh-card: 0 1px 2px rgba(20, 32, 25, 0.04), 0 2px 8px rgba(20, 32, 25, 0.05);
+  --sh-btn: 0 6px 16px -4px rgba(11, 94, 79, 0.35);
+  --sh-soft: 0 12px 30px -10px rgba(20, 32, 25, 0.28);
+
+  /* Pastille d'icone */
+  --icon-badge-bg: #e7f5f1;
+  --icon-badge-fg: #0e7c68;
+
+  /* Graphiques : degrade de teal, plus le dore en 5e position */
+  --chart-1: #0b5e4f;
+  --chart-2: #12a183;
+  --chart-3: #63bcab;
+  --chart-4: #9bd6c9;
+  --chart-5: #b7791f;
+
   --radius: 0.9rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: #f4f7f5;
+  --sidebar-foreground: #142019;
+  --sidebar-primary: #0b5e4f;
+  --sidebar-primary-foreground: #f2f7f5;
+  --sidebar-accent: #e7f5f1;
+  --sidebar-accent-foreground: #0b5e4f;
+  --sidebar-border: #e2e8e5;
+  --sidebar-ring: #12a183;
 }
 
+/* ============================================================
+   THEME SOMBRE
+   Regle : la couleur primaire MONTE dans l'echelle (brand-400)
+   pour rester lisible sur fond fonce. Le dore ne bouge presque
+   pas : c'est la constante de la marque.
+   ============================================================ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0d1714;
+  --foreground: #e6efeb;
+  --card: #132019;
+  --card-foreground: #e6efeb;
+  --popover: #16241d;
+  --popover-foreground: #e6efeb;
+  --primary: #2fa48f;
+  --primary-foreground: #06120f;
+  --secondary: #1a2b25;
+  --secondary-foreground: #c8e9e1;
+  --muted: #1a2b25;
+  --muted-foreground: #7f938b;
+  --accent: #12a183;
+  --accent-foreground: #06120f;
+  --destructive: #f43f5e;
+  --border: #1e2f2a;
+  --input: #24382f;
+  --ring: #2fa48f;
+
+  /* Sceau : le dore s'eclaircit legerement pour tenir sur fond fonce */
+  --seal: #d9a441;
+  --seal-bg: #2a2114;
+  --seal-line: #4a3a1d;
+  --seal-text: #e8c583;
+
+  /* Statuts : fonds sombres teintes, textes clairs */
+  --ok: #34d399;
+  --ok-bg: #10291f;
+  --ok-text: #6ee7b7;
+  --pending: #f59e0b;
+  --pending-bg: #2d2113;
+  --pending-text: #fcd34d;
+  --info: #94a3b8;
+  --info-bg: #1c2530;
+  --info-text: #cbd5e1;
+  --fav: #fb7185;
+
+  /* Ombres : plus profondes, le noir remplace le vert */
+  --sh-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --sh-btn: 0 6px 16px -4px rgba(47, 164, 143, 0.3);
+  --sh-soft: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
+
+  /* Pastille d'icone */
+  --icon-badge-bg: #16302a;
+  --icon-badge-fg: #63bcab;
+
+  --chart-1: #2fa48f;
+  --chart-2: #63bcab;
+  --chart-3: #9bd6c9;
+  --chart-4: #0e7c68;
+  --chart-5: #d9a441;
+
+  --sidebar: #101a16;
+  --sidebar-foreground: #e6efeb;
+  --sidebar-primary: #2fa48f;
+  --sidebar-primary-foreground: #06120f;
+  --sidebar-accent: #1a2b25;
+  --sidebar-accent-foreground: #c8e9e1;
+  --sidebar-border: #1e2f2a;
+  --sidebar-ring: #2fa48f;
 }
 
+/* ============================================================
+   BASE
+   ============================================================ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -165,13 +251,23 @@
     @apply font-sans;
   }
 }
+
 @layer base {
+  /* Ambiance claire : halo teal en haut, brume doree a droite */
   .app-ambient {
     background:
       radial-gradient(900px 520px at 50% -8%, rgba(18, 161, 131, 0.18), transparent 60%),
       radial-gradient(760px 520px at 112% 18%, rgba(183, 121, 31, 0.1), transparent 55%),
       linear-gradient(180deg, #e9f0ec, #dae6e0);
   }
+  /* Ambiance sombre : meme composition, intensites reduites */
+  .dark .app-ambient {
+    background:
+      radial-gradient(900px 520px at 50% -8%, rgba(18, 161, 131, 0.14), transparent 60%),
+      radial-gradient(760px 520px at 112% 18%, rgba(183, 121, 31, 0.07), transparent 55%),
+      linear-gradient(180deg, #101c18, #0b1310);
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -180,46 +276,52 @@
     scrollbar-width: none;
   }
 }
+
+/* ============================================================
+   COMPOSANTS DE BASE MBOACOIN
+   ============================================================ */
 .mboa-phone .PhoneInputInput {
   background: transparent;
   border: none;
   outline: none;
   padding: 0.75rem 0;
   font-size: 0.875rem;
-  color: var(--color-foreground);
+  color: var(--foreground);
 }
 .mboa-phone .PhoneInputInput::placeholder {
-  color: var(--color-muted-foreground);
+  color: var(--muted-foreground);
 }
 .mboa-phone .PhoneInputCountry {
   margin-right: 0.5rem;
 }
 .mboa-phone .PhoneInputCountrySelectArrow {
-  color: var(--color-muted-foreground);
+  color: var(--muted-foreground);
   opacity: 0.7;
 }
-/* Base de style MboaCoin : dimensions "vraie app" réutilisables */
+
+/* Dimensions "vraie app" reutilisables */
 .screen-title {
-  font-size: 1.375rem;   /* 22px */
+  font-size: 1.375rem; /* 22px */
   line-height: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 .screen-subtitle {
-  font-size: 0.875rem;   /* 14px */
-  color: var(--color-muted-foreground);
+  font-size: 0.875rem; /* 14px */
+  color: var(--muted-foreground);
 }
 .field-label {
   display: block;
-  font-size: 0.8125rem;  /* 13px */
+  font-size: 0.8125rem; /* 13px */
   font-weight: 700;
   margin-bottom: 0.375rem;
 }
-/* Icône dans une pastille ronde teal clair (le motif de la maquette) */
+
+/* Icone dans une pastille ronde teal clair */
 .icon-badge {
   display: grid;
   place-items: center;
   border-radius: 0.9rem;
-  background: var(--color-brand-50);
-  color: var(--color-accent);
+  background: var(--icon-badge-bg);
+  color: var(--icon-badge-fg);
 }
