@@ -154,6 +154,9 @@ export default function VerificationPage() {
             <p className="text-sm font-bold text-destructive">Demande précédente rejetée</p>
             {rejectionReason && <p className="mt-0.5 text-xs text-muted-foreground">Motif : {rejectionReason}</p>}
             <p className="mt-1 text-xs text-muted-foreground">Vous pouvez soumettre une nouvelle demande.</p>
+            <Link href="/support" className="mt-1.5 inline-block text-xs font-bold text-accent underline">
+              Ce refus vous semble injustifié ? Contacter le support
+            </Link>
           </div>
         )}
 

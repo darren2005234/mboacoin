@@ -291,7 +291,7 @@ export default async function LeaseDetailPage({
           )}
         </div>
 
-        {/* Demandes */}
+        {/* Demandes : le canal locataire → bailleur, pas MboaCoin */}
         <Link
           href={`/my-lease/${row.id}/requests`}
           className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
@@ -300,12 +300,27 @@ export default async function LeaseDetailPage({
             <Icon name="handyman" size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">Mes demandes</p>
+            <p className="text-sm font-bold">Un problème avec votre bailleur ?</p>
             <p className="text-xs text-muted-foreground">
               {requests.length === 0
                 ? "Réparation, question, démarche..."
                 : `${requests.length} demande(s)${openRequests > 0 ? `, ${openRequests} en cours` : ""}`}
             </p>
+          </div>
+          <Icon name="chevron_right" size={20} className="text-muted-foreground" />
+        </Link>
+
+        {/* Support : le canal utilisateur → MboaCoin, distinct des demandes ci-dessus */}
+        <Link
+          href="/support"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        >
+          <span className="icon-badge size-11">
+            <Icon name="support_agent" size={20} filled={false} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold">Un problème que votre bailleur ne peut pas résoudre ?</p>
+            <p className="text-xs text-muted-foreground">Caution, arnaque, compte bloqué... Contacter MboaCoin</p>
           </div>
           <Icon name="chevron_right" size={20} className="text-muted-foreground" />
         </Link>

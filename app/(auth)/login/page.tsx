@@ -72,6 +72,12 @@ function LoginInner() {
           <p className="text-center text-xs text-muted-foreground">
             Un code de vérification vous sera envoyé par SMS.
           </p>
+          <p className="text-center text-xs text-muted-foreground">
+            Impossible d&apos;accéder à votre compte ?{" "}
+            <a href="/support" className="font-semibold text-primary underline">
+              Contacter le support
+            </a>
+          </p>
         </div>
       </div>
     </main>

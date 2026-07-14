@@ -65,6 +65,7 @@ export default async function ProfilePage() {
           <MenuRow icon="query_stats" label="Statistiques" href="/analytics" />
         )}
         <MenuRow icon="settings" label="Paramètres" href="/profile/settings" />
+        <MenuRow icon="support_agent" label="Aide et support" href="/support" />
         <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
         <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
         {profile.role === "admin" && (

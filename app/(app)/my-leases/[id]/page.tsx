@@ -597,6 +597,21 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
 
+        {/* Support : le canal bailleur → MboaCoin, distinct des demandes ci-dessus (locataire → bailleur) */}
+        <Link
+          href="/support"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        >
+          <span className="icon-badge size-11">
+            <Icon name="support_agent" size={20} filled={false} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold">Un problème que votre locataire ne peut pas résoudre ?</p>
+            <p className="text-xs text-muted-foreground">Caution, arnaque, compte bloqué... Contacter MboaCoin</p>
+          </div>
+          <Icon name="chevron_right" size={20} className="text-muted-foreground" />
+        </Link>
+
         {/* État des lieux */}
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
           <p className="text-sm font-bold">État des lieux</p>

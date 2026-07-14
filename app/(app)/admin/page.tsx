@@ -6,21 +6,25 @@ import { AdminSectionCard } from "@/components/mboacoin/admin-section-card";
 import { getPendingVerificationsCount } from "@/lib/admin-verification";
 import { getPendingListingVerifsCount } from "@/lib/admin-listing-verification";
 import { getPendingReportsCount } from "@/lib/admin-reports";
+import { getPendingSupportTicketsCount } from "@/lib/admin-support";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [verificationsCount, setVerificationsCount] = useState(0);
   const [reportsCount, setReportsCount] = useState(0);
+  const [supportCount, setSupportCount] = useState(0);
 
   useEffect(() => {
     (async () => {
-      const [identity, listing, reports] = await Promise.all([
+      const [identity, listing, reports, support] = await Promise.all([
         getPendingVerificationsCount(),
         getPendingListingVerifsCount(),
         getPendingReportsCount(),
+        getPendingSupportTicketsCount(),
       ]);
       setVerificationsCount(identity + listing);
       setReportsCount(reports);
+      setSupportCount(support);
       setLoading(false);
     })();
   }, []);
@@ -39,6 +43,13 @@ export default function AdminDashboardPage() {
       description: "Annonces et utilisateurs signalés",
       href: "/admin/reports",
       count: reportsCount,
+    },
+    {
+      icon: "support_agent",
+      label: "Support",
+      description: "Demandes des utilisateurs et visiteurs",
+      href: "/admin/support",
+      count: supportCount,
     },
     {
       icon: "query_stats",
