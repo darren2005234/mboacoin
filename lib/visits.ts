@@ -98,6 +98,22 @@ function mapVisitRow(row: VisitRow, userId: string): Visit {
   };
 }
 
+/** Statuts terminaux négatifs : une visite dans l'un de ces états ne doit plus jamais être
+ * retenue comme "la" visite pertinente d'une conversation, même la plus récente. */
+const TERMINAL_NEGATIVE_STATUSES = new Set(["annulee", "refusee", "expiree"]);
+
+/**
+ * Visite pertinente parmi celles fournies : exclut les statuts terminaux négatifs, puis retient
+ * la plus récente (createdAt) parmi le reste. Redondant avec le filtre déjà appliqué côté SQL par
+ * getVisitByConversation (`.not("status","in",...)`) — défense en profondeur volontaire, pour que
+ * la règle reste correcte même si le filtre SQL venait à changer ou disparaître.
+ */
+export function pickRelevantVisit(visits: readonly Visit[]): Visit | null {
+  const relevant = visits.filter((v) => !TERMINAL_NEGATIVE_STATUSES.has(v.status));
+  if (relevant.length === 0) return null;
+  return relevant.reduce((latest, v) => (v.createdAt > latest.createdAt ? v : latest));
+}
+
 /** Formate un créneau (date + heure) en français. */
 export function formatVisitDateTime(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR", {
@@ -164,7 +180,13 @@ export async function getVisit(visitId: string): Promise<Visit | null> {
   return mapVisitRow(data as unknown as VisitRow, user.id);
 }
 
-/** Dernière visite liée à une conversation (pour la bannière de statut dans le fil de messages). */
+/**
+ * Dernière visite pertinente d'une conversation (pour la bannière de statut dans le fil de
+ * messages). Exclut les statuts terminaux négatifs : une conversation peut accumuler plusieurs
+ * visites au fil du temps (nouvelle demande après une visite déjà effectuée, par exemple), et une
+ * demande refusée/annulée/expirée plus récente ne doit pas masquer une visite antérieure encore
+ * pertinente (confirmée, effectuée...).
+ */
 export async function getVisitByConversation(conversationId: string): Promise<Visit | null> {
   const supabase = createClient();
   const {
@@ -176,12 +198,12 @@ export async function getVisitByConversation(conversationId: string): Promise<Vi
     .from("visits")
     .select(VISIT_SELECT)
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .not("status", "in", "(annulee,refusee,expiree)")
+    .order("created_at", { ascending: false });
 
   if (error || !data) return null;
-  return mapVisitRow(data as unknown as VisitRow, user.id);
+  const visits = (data as unknown as VisitRow[]).map((row) => mapVisitRow(row, user.id));
+  return pickRelevantVisit(visits);
 }
 
 /** Le bailleur accepte l'un des créneaux proposés : la visite passe en "confirmee". */
