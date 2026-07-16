@@ -1,6 +1,5 @@
 -- Sous-chantier BAIL-2 — Confirmation du bail par le locataire + socle de l'espace locataire
 -- Additif uniquement : aucun bail ni aucune annonce existante n'est cassé.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- A.1 — PRÉ-VOL (à exécuter séparément AVANT le reste, en lecture seule)

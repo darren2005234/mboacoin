@@ -1,6 +1,5 @@
 -- Sous-chantier BAIL-4 (partie A) — Demandes structurées post-bail
 -- Additif uniquement : aucune table/bucket existant n'est modifié.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 -- Distinct et sans lien avec conversations/messages (messagerie avant-bail liée aux annonces).
 
 -- ============================================================================

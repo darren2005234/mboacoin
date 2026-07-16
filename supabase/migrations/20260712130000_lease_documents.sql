@@ -1,6 +1,5 @@
 -- Sous-chantier BAIL-4 (partie B) — Contrat de bail
 -- Additif uniquement : aucune table/bucket existant n'est modifié.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- B.1 — Bucket privé lease-contracts

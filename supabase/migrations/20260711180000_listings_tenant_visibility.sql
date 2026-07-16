@@ -1,7 +1,6 @@
 -- Correctif — 404 sur la fiche d'un logement loué, pour son locataire
 -- Additif uniquement : élargit l'accès à des lignes précises pour des
 -- utilisateurs précis, ne retire ni ne restreint jamais rien.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- A.1 — PRÉ-VOL (à exécuter séparément AVANT le reste, en lecture seule)

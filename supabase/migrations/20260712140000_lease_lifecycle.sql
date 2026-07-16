@@ -1,6 +1,5 @@
 -- Sous-chantier BAIL-5 (partie 1) — Cycle de vie du bail : fin, annulation, correction
 -- Additif/évolutif uniquement : aucune donnée existante n'est perdue.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- A.1 — PRÉ-VOL (à exécuter séparément AVANT le reste, en lecture seule)

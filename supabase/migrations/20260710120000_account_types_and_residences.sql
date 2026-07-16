@@ -1,6 +1,5 @@
 -- Chantier 1 — Types de comptes et résidences (fondations)
 -- Additif uniquement : aucune annonce ni aucun profil existant n'est cassé.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- A.1 — PRÉ-VOL (à exécuter séparément AVANT le reste, en lecture seule)

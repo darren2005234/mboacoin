@@ -1,6 +1,5 @@
 -- Sous-chantier BAIL-5 (partie 2) — Propositions de modification d'un bail actif
 -- Additif uniquement : aucune table existante n'est modifiée.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- B.1 — Table lease_amendments

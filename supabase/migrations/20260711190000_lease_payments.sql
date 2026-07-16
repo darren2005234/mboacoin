@@ -1,6 +1,5 @@
 -- Sous-chantier BAIL-3 — Paiements de loyer et quittances
 -- Additif uniquement : aucun bail, annonce ou paiement existant n'est cassé.
--- Voir le plan complet dans .claude/plans (ou l'historique de conversation) pour le contexte.
 
 -- ============================================================================
 -- A.1 — Table lease_payments
