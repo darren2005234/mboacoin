@@ -51,25 +51,44 @@ export default async function ProfilePage() {
         )}
       </div>
 
-      <div className="space-y-2 px-5">
-        <MenuRow icon="edit" label="Modifier mon profil" href="/profile/edit" />
-        <MenuRow icon="verified_user" label="Vérifier mon identité" href="/profile/verification" />
-        <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
-        <MenuRow icon="calendar_month" label="Mes visites" href="/visits" />
-        <MenuRow icon="key" label="Mes baux" href="/my-leases" />
-        {hasActiveLease && <MenuRow icon="home" label="Ma location" href="/my-lease" />}
-        {profile.accountType === "residence" && (
-          <MenuRow icon="location_city" label="Mes résidences" href="/my-residences" />
-        )}
-        {(profile.accountType === "agence" || profile.accountType === "residence") && (
-          <MenuRow icon="query_stats" label="Statistiques" href="/analytics" />
-        )}
-        <MenuRow icon="settings" label="Paramètres" href="/profile/settings" />
-        <MenuRow icon="support_agent" label="Aide et support" href="/support" />
-        <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
-        <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
+      <div className="space-y-6 px-5">
+        <div className="space-y-2">
+          <SectionLabel>Mon compte</SectionLabel>
+          <MenuRow icon="edit" label="Modifier mon profil" href="/profile/edit" />
+          <MenuRow icon="verified_user" label="Vérifier mon identité" href="/profile/verification" />
+        </div>
+
+        <div className="space-y-2">
+          <SectionLabel>Mes activités</SectionLabel>
+          <MenuRow icon="apartment" label="Mes annonces" href="/my-listings" />
+          {hasActiveLease && <MenuRow icon="home" label="Ma location" href="/my-lease" />}
+          <MenuRow icon="key" label="Mes baux" href="/my-leases" />
+          <MenuRow icon="calendar_month" label="Mes visites" href="/visits" />
+          {profile.accountType === "residence" && (
+            <MenuRow icon="location_city" label="Mes résidences" href="/my-residences" />
+          )}
+          {(profile.accountType === "agence" || profile.accountType === "residence") && (
+            <MenuRow icon="query_stats" label="Statistiques" href="/analytics" />
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <SectionLabel>Réglages</SectionLabel>
+          <MenuRow icon="settings" label="Paramètres" href="/profile/settings" />
+        </div>
+
+        <div className="space-y-2">
+          <SectionLabel>Aide et informations</SectionLabel>
+          <MenuRow icon="support_agent" label="Aide et support" href="/support" />
+          <MenuRow icon="description" label="Conditions d'utilisation" href="/legal/conditions" />
+          <MenuRow icon="shield" label="Politique de confidentialité" href="/legal/confidentialite" />
+        </div>
+
         {profile.role === "admin" && (
-          <MenuRow icon="admin_panel_settings" label="Administration" href="/admin" />
+          <div className="space-y-2">
+            <SectionLabel>Administration</SectionLabel>
+            <MenuRow icon="admin_panel_settings" label="Administration" href="/admin" />
+          </div>
         )}
       </div>
 
@@ -82,6 +101,10 @@ export default async function ProfilePage() {
       </div>
     </div>
   );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="px-1 pb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{children}</p>;
 }
 
 function MenuRow({

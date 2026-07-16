@@ -1,5 +1,54 @@
 import { createClient } from "@/lib/supabase/client";
 import { friendlyErrorMessage } from "@/lib/supabase-error";
+import { compressImages } from "@/lib/image-compression";
+
+export const MAX_ATTACHMENTS_PER_MESSAGE = 6;
+export const MAX_ATTACHMENT_RAW_SIZE_MB = 15;
+
+interface AttachmentLike {
+  type: string;
+  size: number;
+}
+
+/**
+ * Validation pure (aucun accès réseau) des pièces jointes d'un message, avant
+ * tout upload : type image uniquement, taille brute raisonnable avant
+ * compression, nombre plafonné (miroir du plafond vérifié en base par
+ * message_attachments_before_insert). Un message doit avoir du texte OU au
+ * moins une image — jamais les deux vides.
+ */
+export function validateMessageAttachments(files: AttachmentLike[], hasBody: boolean): string | null {
+  if (files.length === 0 && !hasBody) {
+    return "Écrivez un message ou joignez au moins une image.";
+  }
+  if (files.length > MAX_ATTACHMENTS_PER_MESSAGE) {
+    return `Maximum ${MAX_ATTACHMENTS_PER_MESSAGE} images par message.`;
+  }
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) {
+      return "Seules les images sont acceptées en pièce jointe.";
+    }
+    if (file.size > MAX_ATTACHMENT_RAW_SIZE_MB * 1024 * 1024) {
+      return `Chaque image doit faire moins de ${MAX_ATTACHMENT_RAW_SIZE_MB} Mo.`;
+    }
+  }
+  return null;
+}
+
+async function uploadMessageAttachment(conversationId: string, messageId: string, file: File): Promise<string | null> {
+  const supabase = createClient();
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${conversationId}/${messageId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("message-attachments").upload(path, file, { upsert: false });
+  return error ? null : path;
+}
+
+/** URL signée (1h) pour consulter une pièce jointe de message. */
+export async function getMessageAttachmentSignedUrl(path: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data } = await supabase.storage.from("message-attachments").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
 
 /** Récupère les infos d'une conversation (annonce + interlocuteur). */
 /** Récupère les infos d'une conversation : annonce reliée + interlocuteur. */
@@ -51,15 +100,21 @@ export async function getConversation(conversationId: string) {
   };
 }
 
+export interface MessageAttachment {
+  id: string;
+  storagePath: string;
+}
+
 export interface Message {
   id: string;
   body: string;
   senderId: string;
   createdAt: string;
   readAt: string | null;
+  attachments: MessageAttachment[];
 }
 
-/** Récupère les messages d'une conversation, du plus ancien au plus récent. */
+/** Récupère les messages d'une conversation, du plus ancien au plus récent, pièces jointes incluses. */
 export async function getMessages(conversationId: string): Promise<Message[]> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -68,31 +123,69 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
-  if (error) return [];
-  return (data ?? []).map((m) => ({
+  if (error || !data) return [];
+
+  const messageIds = data.map((m) => m.id);
+  const { data: attRows } =
+    messageIds.length > 0
+      ? await supabase.from("message_attachments").select("id, message_id, storage_path").in("message_id", messageIds)
+      : { data: [] as { id: string; message_id: string; storage_path: string }[] };
+
+  const attachmentsByMessage = new Map<string, MessageAttachment[]>();
+  for (const a of attRows ?? []) {
+    const list = attachmentsByMessage.get(a.message_id) ?? [];
+    list.push({ id: a.id, storagePath: a.storage_path });
+    attachmentsByMessage.set(a.message_id, list);
+  }
+
+  return data.map((m) => ({
     id: m.id,
     body: m.body,
     senderId: m.sender_id,
     createdAt: m.created_at,
     readAt: m.read_at,
+    attachments: attachmentsByMessage.get(m.id) ?? [],
   }));
 }
 
-/** Envoie un message dans une conversation. */
-export async function sendMessage(conversationId: string, body: string) {
+/** Envoie un message dans une conversation, avec pièces jointes (images) éventuelles. */
+export async function sendMessage(
+  conversationId: string,
+  body: string,
+  files: File[] = []
+): Promise<{ success?: boolean; error?: string }> {
+  const trimmed = body.trim();
+
+  const validationError = validateMessageAttachments(files, trimmed.length > 0);
+  if (validationError) return { error: validationError };
+
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "not-authenticated" };
 
-  const { error } = await supabase.from("messages").insert({
-    conversation_id: conversationId,
-    sender_id: user.id,
-    body: body.trim(),
-  });
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: user.id,
+      body: trimmed,
+    })
+    .select("id")
+    .single();
 
-  if (error) return { error: friendlyErrorMessage(error, "Impossible d'envoyer le message. Réessayez.") };
+  if (error || !data) return { error: friendlyErrorMessage(error!, "Impossible d'envoyer le message. Réessayez.") };
+
+  if (files.length > 0) {
+    const compressed = await compressImages(files);
+    for (const file of compressed) {
+      const path = await uploadMessageAttachment(conversationId, data.id, file);
+      if (path) {
+        await supabase.from("message_attachments").insert({ message_id: data.id, storage_path: path });
+      }
+    }
+  }
 
   await supabase
     .from("conversations")

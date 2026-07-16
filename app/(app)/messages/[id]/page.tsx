@@ -4,7 +4,7 @@ import { Icon } from "@/components/mboacoin/icon";
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Paperclip, Send, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   getConversation,
@@ -22,6 +22,8 @@ import { VisitStatusBadge } from "@/components/mboacoin/visit-status-badge";
 import { unavailableListingSentence } from "@/lib/listing-status";
 import { useRequireAuth } from "@/lib/use-require-auth";
 import { ReportDialog } from "@/components/mboacoin/report-dialog";
+import { MessageImages } from "@/components/mboacoin/message-images";
+import { Lightbox } from "@/components/mboacoin/lightbox";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -43,6 +45,10 @@ export default function ConversationPage({
   const [messages, setMessages] = useState<Message[]>([]);
   const [visit, setVisit] = useState<Visit | null>(null);
   const [text, setText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ images: string[]; index: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +69,11 @@ export default function ConversationPage({
       setLoading(false);
     })();
 
-    // Abonnement temps réel : nouveaux messages ET mises à jour (lecture)
+    // Abonnement temps réel : nouveaux messages ET mises à jour (lecture).
+    // Un nouveau message texte+pièces jointes arrive en deux INSERT séparés
+    // (messages puis message_attachments juste après) : un refetch complet
+    // est plus simple et plus sûr qu'un ajout manuel qui manquerait les
+    // pièces jointes — liste de messages typiquement courte, coût négligeable.
     const channel = supabase
       .channel(`messages:${id}`)
       .on(
@@ -74,27 +84,8 @@ export default function ConversationPage({
           table: "messages",
           filter: `conversation_id=eq.${id}`,
         },
-        (payload) => {
-          const m = payload.new as {
-            id: string;
-            body: string;
-            sender_id: string;
-            created_at: string;
-            read_at: string | null;
-          };
-          setMessages((prev) => {
-            if (prev.some((x) => x.id === m.id)) return prev;
-            return [
-              ...prev,
-              {
-                id: m.id,
-                body: m.body,
-                senderId: m.sender_id,
-                createdAt: m.created_at,
-                readAt: m.read_at ?? null,
-              },
-            ];
-          });
+        () => {
+          getMessages(id).then(setMessages);
         }
       )
       .on(
@@ -135,15 +126,27 @@ export default function ConversationPage({
   }, [messages]);
 
   async function send() {
-    const body = text.trim();
-    if (!body) return;
+    if (!text.trim() && files.length === 0) return;
+    setSending(true);
+    setError(null);
+    const result = await sendMessage(id, text, files);
+    if (result.error) {
+      setError(result.error);
+      setSending(false);
+      return;
+    }
     setText("");
-    await sendMessage(id, body);
+    setFiles([]);
     setMessages(await getMessages(id));
+    setSending(false);
   }
 
   async function sendSuggestion(suggestion: string) {
-    await sendMessage(id, suggestion);
+    const result = await sendMessage(id, suggestion);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
     setMessages(await getMessages(id));
   }
 
@@ -267,7 +270,7 @@ export default function ConversationPage({
                       : "rounded-bl-md bg-secondary text-foreground"
                   )}
                 >
-                  <span>{m.body}</span>
+                  {m.body && <span>{m.body}</span>}
                   {mine && (
                     <span className="ml-2 inline-flex translate-y-0.5 items-center">
                       <Icon
@@ -276,6 +279,12 @@ export default function ConversationPage({
                         className={m.readAt ? "text-brand-200" : "text-primary-foreground/60"}
                       />
                     </span>
+                  )}
+                  {m.attachments.length > 0 && (
+                    <MessageImages
+                      attachments={m.attachments}
+                      onZoom={(images, index) => setZoom({ images, index })}
+                    />
                   )}
                 </div>
               </div>
@@ -288,23 +297,75 @@ export default function ConversationPage({
       {messages.length === 1 && <PushOptInCard context="first_message" />}
 
       {/* Saisie */}
-      <div className="flex items-center gap-2 border-t border-border p-3">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Votre message..."
-          className="flex-1 rounded-full border border-input bg-card px-4 py-2.5 text-[15px] outline-none focus:border-accent"
-        />
-        <button
-          onClick={send}
-          disabled={!text.trim()}
-          aria-label="Envoyer"
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
-        >
-          <Send className="size-5" />
-        </button>
+      <div className="border-t border-border p-3">
+        {error && <p className="mb-2 text-xs font-medium text-destructive">{error}</p>}
+
+        {files.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {files.map((file, i) => (
+              <div key={i} className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-border">
+                <Image
+                  src={URL.createObjectURL(file)}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="56px"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                  aria-label="Retirer"
+                  className="absolute right-0.5 top-0.5 grid size-4 place-items-center rounded-full bg-black/60 text-white"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="conversation-attach-files"
+            aria-label="Joindre une image"
+            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full border border-input bg-card text-muted-foreground"
+          >
+            <Paperclip className="size-5" />
+          </label>
+          <input
+            id="conversation-attach-files"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              setError(null);
+              setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+              e.target.value = "";
+            }}
+          />
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            placeholder="Votre message..."
+            className="flex-1 rounded-full border border-input bg-card px-4 py-2.5 text-[15px] outline-none focus:border-accent"
+          />
+          <button
+            onClick={send}
+            disabled={(!text.trim() && files.length === 0) || sending}
+            aria-label="Envoyer"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+          >
+            <Send className="size-5" />
+          </button>
+        </div>
       </div>
+
+      {zoom && (
+        <Lightbox images={zoom.images} startIndex={zoom.index} onClose={() => setZoom(null)} unoptimized />
+      )}
     </div>
   );
 }
