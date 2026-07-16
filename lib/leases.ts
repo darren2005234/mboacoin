@@ -127,6 +127,7 @@ export interface MyLease {
   listingId: string;
   listingTitle: string;
   listingImage: string;
+  tenantId: string | null;
   tenantPhone: string;
   tenantName: string | null;
   tenantVerified: boolean;
@@ -146,11 +147,12 @@ export interface MyLease {
 }
 
 const MY_LEASE_SELECT =
-  "id, listing_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, payment_mode, created_at, end_reason, ended_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name, verification)";
+  "id, listing_id, tenant_id, tenant_phone, status, start_date, duration_months, end_date, rent_amount, deposit_amount, advance_amount, payment_day, payment_period, payment_mode, created_at, end_reason, ended_at, listing:listings(title, image_url), tenant:profiles!tenant_id(full_name, verification)";
 
 function mapMyLeaseRow(row: {
   id: string;
   listing_id: string;
+  tenant_id: string | null;
   tenant_phone: string;
   status: string;
   start_date: string;
@@ -179,6 +181,7 @@ function mapMyLeaseRow(row: {
     listingId: row.listing_id,
     listingTitle: listing?.title ?? "Logement",
     listingImage: listing?.image_url ?? "/img/listings/demo-1.jpg",
+    tenantId: row.tenant_id,
     tenantPhone: row.tenant_phone,
     tenantName: tenant?.full_name ?? null,
     tenantVerified: tenant?.verification === "verifie",

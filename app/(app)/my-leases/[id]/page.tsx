@@ -31,6 +31,7 @@ import {
   type AmendmentPatch,
 } from "@/lib/lease-amendments";
 import { getInspectionsSummary, INSPECTION_STATUS_LABELS, type InspectionSummary } from "@/lib/property-inspections";
+import { ReportDialog } from "@/components/mboacoin/report-dialog";
 
 const dateInputCls =
   "w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-ring/25";
@@ -244,6 +245,9 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
             </div>
             <Price amount={lease.rentAmount} suffix={priceSuffixFor(lease.paymentPeriod)} size="sm" className="mt-1" />
           </div>
+          {lease.tenantId && (
+            <ReportDialog targetType="user" targetId={lease.tenantId} label="Signaler" />
+          )}
         </div>
 
         {error && <p className="text-sm font-medium text-destructive">{error}</p>}

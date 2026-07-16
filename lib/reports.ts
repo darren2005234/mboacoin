@@ -1,6 +1,25 @@
 import { createClient } from "@/lib/supabase/client";
 import { friendlyErrorMessage } from "@/lib/supabase-error";
 
+/**
+ * Motifs codés pour un signalement de COMPTE (contrainte reports_user_reason_check
+ * côté base). Volontairement pas de motif "paiement hors plateforme" : aucun
+ * paiement ne transite par l'app en v1, payer hors plateforme est donc le
+ * fonctionnement normal — le vrai problème (paiement anticipé frauduleux
+ * avant tout engagement réel) est couvert par "arnaque".
+ */
+export const REPORT_USER_REASONS = [
+  { value: "arnaque", label: "Tentative d'arnaque ou demande de paiement suspecte" },
+  { value: "usurpation", label: "Usurpation d'identité" },
+  { value: "harcelement", label: "Harcèlement" },
+  { value: "comportement_inapproprie", label: "Comportement inapproprié" },
+  { value: "autre", label: "Autre" },
+] as const;
+
+export const REPORT_USER_REASON_LABELS: Record<string, string> = Object.fromEntries(
+  REPORT_USER_REASONS.map((r) => [r.value, r.label])
+);
+
 /** Signale une annonce. */
 export async function reportListing(
   listingId: string,

@@ -195,6 +195,11 @@ export default function AdminIdentityVerificationsPage() {
                         Compte professionnel
                       </span>
                     )}
+                    {item.suspended && (
+                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                        Suspendu
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">{item.documentType ?? "Document"}</p>
                 </div>

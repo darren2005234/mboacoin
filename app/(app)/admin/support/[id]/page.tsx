@@ -73,7 +73,14 @@ export default function AdminSupportTicketPage({ params }: { params: Promise<{ i
 
         {/* Contexte du demandeur */}
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
-          <p className="text-sm font-bold">Demandeur</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold">Demandeur</p>
+            {ctx?.suspended && (
+              <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
+                Suspendu
+              </span>
+            )}
+          </div>
           {ctx ? (
             <div className="grid grid-cols-2 gap-2 text-xs">
               <Info label="Nom" value={ctx.fullName ?? "—"} />

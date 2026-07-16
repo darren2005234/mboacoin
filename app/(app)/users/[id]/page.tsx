@@ -6,6 +6,8 @@ import { TrustSeal } from "@/components/mboacoin/trust-seal";
 import { BackButton } from "@/components/mboacoin/back-button";
 import { ViewableAvatar } from "@/components/mboacoin/viewable-avatar";
 import { getMyFavoriteIdsServer } from "@/lib/favorites-server";
+import { ReportDialog } from "@/components/mboacoin/report-dialog";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function PublicProfilePage({
   params,
@@ -16,6 +18,12 @@ export default async function PublicProfilePage({
   const profile = await getPublicProfile(id);
   if (!profile) notFound();
   const favoriteIds = await getMyFavoriteIdsServer();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isSelf = user?.id === profile.id;
 
   const memberSince = profile.memberSince
     ? new Date(profile.memberSince).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
@@ -41,6 +49,11 @@ export default async function PublicProfilePage({
             )}
             {profile.bio && (
               <p className="mt-3 px-2 text-sm leading-relaxed text-foreground/80">{profile.bio}</p>
+            )}
+            {!isSelf && (
+              <div className="mt-3 flex justify-center">
+                <ReportDialog targetType="user" targetId={profile.id} label="Signaler cet utilisateur" />
+              </div>
             )}
           </div>
         </div>

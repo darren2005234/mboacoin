@@ -40,6 +40,7 @@ export async function getConversation(conversationId: string) {
       status: listing?.status ?? null,
     },
     other: {
+      id: iAmOwner ? data.tenant_id : data.owner_id,
       name: other?.full_name ?? "Utilisateur",
       city: other?.city ?? null,
       verified: other?.verification === "verifie",

@@ -21,6 +21,7 @@ import { getVisitByConversation, formatVisitDateTime, type Visit } from "@/lib/v
 import { VisitStatusBadge } from "@/components/mboacoin/visit-status-badge";
 import { unavailableListingSentence } from "@/lib/listing-status";
 import { useRequireAuth } from "@/lib/use-require-auth";
+import { ReportDialog } from "@/components/mboacoin/report-dialog";
 
 const SUGGESTIONS = [
   "Bonjour, ce logement est-il toujours disponible ?",
@@ -166,6 +167,9 @@ export default function ConversationPage({
               : ""}
           </p>
         </div>
+        {info?.other.id && (
+          <ReportDialog targetType="user" targetId={info.other.id} label="Signaler" />
+        )}
       </header>
 
       {/* Encart annonce reliée */}

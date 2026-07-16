@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
-import { reportListing, reportUser } from "@/lib/reports";
+import { reportListing, reportUser, REPORT_USER_REASONS } from "@/lib/reports";
 import { loginUrl } from "@/lib/auth-redirect";
 
 const LISTING_REASONS = [
@@ -14,15 +14,7 @@ const LISTING_REASONS = [
   "Photos trompeuses",
   "Contenu inapproprié",
   "Autre",
-];
-
-const USER_REASONS = [
-  "Comportement frauduleux",
-  "Faux profil",
-  "Propos déplacés",
-  "Arnaque à l'acompte",
-  "Autre",
-];
+].map((label) => ({ value: label, label }));
 
 interface ReportDialogProps {
   /** Type de cible : annonce ou utilisateur. */
@@ -41,7 +33,7 @@ export function ReportDialog({ targetType, targetId, label = "Signaler" }: Repor
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reasons = targetType === "listing" ? LISTING_REASONS : USER_REASONS;
+  const reasons = targetType === "listing" ? LISTING_REASONS : REPORT_USER_REASONS;
 
   async function submit() {
     if (!reason) {
@@ -90,7 +82,7 @@ export function ReportDialog({ targetType, targetId, label = "Signaler" }: Repor
                 </span>
                 <p className="text-base font-bold">Signalement envoyé</p>
                 <p className="text-sm text-muted-foreground">
-                  Merci, notre équipe va examiner ce signalement.
+                  Votre signalement a été transmis.
                 </p>
                 <Button size="lg" className="mt-2 w-full" onClick={() => { setOpen(false); setDone(false); setReason(""); setDetails(""); }}>
                   Fermer
@@ -106,16 +98,16 @@ export function ReportDialog({ targetType, targetId, label = "Signaler" }: Repor
                 <div className="space-y-2">
                   {reasons.map((r) => (
                     <button
-                      key={r}
-                      onClick={() => setReason(r)}
+                      key={r.value}
+                      onClick={() => setReason(r.value)}
                       className={
-                        reason === r
+                        reason === r.value
                           ? "flex w-full items-center justify-between rounded-xl border-2 border-accent bg-brand-50 px-4 py-3 text-left text-sm font-semibold"
                           : "flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium"
                       }
                     >
-                      {r}
-                      {reason === r && <Icon name="check" size={18} className="text-accent" />}
+                      {r.label}
+                      {reason === r.value && <Icon name="check" size={18} className="text-accent" />}
                     </button>
                   ))}
                 </div>

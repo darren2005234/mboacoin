@@ -17,6 +17,7 @@ export interface PendingVerification {
   entityDocumentPurged: boolean;
   entityDocumentType: string | null;
   entityIsPdf: boolean;
+  suspended: boolean;
 }
 
 /** Nombre de demandes de vérification d'identité en attente (admin uniquement, comptage léger). */
@@ -49,6 +50,11 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
     .order("created_at", { ascending: true });
 
   if (error || !data) return [];
+
+  const userIds = [...new Set(data.map((row) => row.user_id))];
+  const { data: suspendedRows } =
+    userIds.length > 0 ? await supabase.rpc("list_suspended_user_ids", { p_user_ids: userIds }) : { data: [] };
+  const suspendedIds = new Set((suspendedRows ?? []).map((r: { id: string }) => r.id));
 
   const results: PendingVerification[] = [];
   for (const row of data) {
@@ -108,6 +114,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
       entityDocumentPurged,
       entityDocumentType: row.entity_document_type,
       entityIsPdf,
+      suspended: suspendedIds.has(row.user_id),
     });
   }
   return results;

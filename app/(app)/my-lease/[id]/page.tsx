@@ -14,6 +14,7 @@ import { TenantLeaseActions } from "@/components/mboacoin/tenant-lease-actions";
 import { RenewalIntentPrompt } from "@/components/mboacoin/renewal-intent-prompt";
 import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
 import { loginUrl } from "@/lib/auth-redirect";
+import { ReportDialog } from "@/components/mboacoin/report-dialog";
 
 interface LeaseDetailRow {
   id: string;
@@ -169,6 +170,7 @@ export default async function LeaseDetailPage({
             <p className="text-sm font-bold">{landlord?.full_name ?? "Bailleur"}</p>
             {landlord?.verification === "verifie" && <TrustSealBadge label="Bailleur vérifié" className="mt-0.5" />}
           </div>
+          <ReportDialog targetType="user" targetId={row.landlord_id} label="Signaler" />
         </div>
 
         {/* Conditions du bail */}

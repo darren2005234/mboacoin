@@ -73,6 +73,7 @@ export interface SupportTicketRequesterContext {
   listingCount: number;
   landlordLeaseCount: number;
   tenantLeaseCount: number;
+  suspended: boolean;
 }
 
 /** Contexte du demandeur (profil + volumétrie) — seulement pour un ticket rattaché à un compte. */
@@ -80,20 +81,26 @@ async function getRequesterContext(userId: string): Promise<SupportTicketRequest
   const supabase = createClient();
   const [{ data: profile }, { count: listingCount }, { count: landlordLeaseCount }, { count: tenantLeaseCount }] =
     await Promise.all([
-      supabase.from("profiles").select("full_name, verification, account_type").eq("id", userId).maybeSingle(),
+      // suspended_at/suspension_reason ne sont pas lisibles en select direct
+      // (colonnes révoquées) : get_user_admin_detail les expose, admin uniquement.
+      supabase.rpc("get_user_admin_detail", { p_user_id: userId }).maybeSingle(),
       supabase.from("listings").select("id", { count: "exact", head: true }).eq("owner_id", userId),
       supabase.from("leases").select("id", { count: "exact", head: true }).eq("landlord_id", userId),
       supabase.from("leases").select("id", { count: "exact", head: true }).eq("tenant_id", userId),
     ]);
 
   if (!profile) return null;
+  const row = profile as {
+    full_name: string | null; verification: string; account_type: string; suspended_at: string | null;
+  };
   return {
-    fullName: profile.full_name,
-    verification: profile.verification,
-    accountType: profile.account_type,
+    fullName: row.full_name,
+    verification: row.verification,
+    accountType: row.account_type,
     listingCount: listingCount ?? 0,
     landlordLeaseCount: landlordLeaseCount ?? 0,
     tenantLeaseCount: tenantLeaseCount ?? 0,
+    suspended: row.suspended_at != null,
   };
 }
 

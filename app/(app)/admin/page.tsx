@@ -52,6 +52,12 @@ export default function AdminDashboardPage() {
       count: supportCount,
     },
     {
+      icon: "block",
+      label: "Comptes suspendus",
+      description: "Comptes bloqués par un administrateur",
+      href: "/admin/users/suspended",
+    },
+    {
       icon: "query_stats",
       label: "Analytique",
       description: "Recherches, vues, favoris",
