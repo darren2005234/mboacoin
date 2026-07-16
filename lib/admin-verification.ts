@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { requireAdminClient } from "@/lib/admin-guard";
+import { logDocumentAccess } from "@/lib/admin-audit-log";
 
 export interface PendingVerification {
   id: string;
@@ -73,6 +74,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
         .createSignedUrl(row.document_path, 3600);
       documentUrl = signed?.signedUrl ?? "";
       isPdf = row.document_path.toLowerCase().endsWith(".pdf");
+      await logDocumentAccess("identity_document_accessed", "verification_request", row.id, row.user_id, "document");
     }
 
     let selfieUrl = "";
@@ -82,6 +84,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
         .from("identity-documents")
         .createSignedUrl(row.selfie_path, 3600);
       selfieUrl = signedSelfie?.signedUrl ?? "";
+      await logDocumentAccess("identity_document_accessed", "verification_request", row.id, row.user_id, "selfie");
     }
 
     // entity_document_type non nul = un document d'entité a été soumis à un
@@ -97,6 +100,7 @@ export async function getPendingVerifications(): Promise<PendingVerification[]> 
         .createSignedUrl(row.entity_document_path, 3600);
       entityDocumentUrl = signedEntity?.signedUrl ?? "";
       entityIsPdf = row.entity_document_path.toLowerCase().endsWith(".pdf");
+      await logDocumentAccess("identity_document_accessed", "verification_request", row.id, row.user_id, "entity_document");
     }
 
     results.push({

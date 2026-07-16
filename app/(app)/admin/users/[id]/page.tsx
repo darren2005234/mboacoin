@@ -96,6 +96,12 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
             >
               <Icon name="open_in_new" size={14} /> Voir le profil public
             </a>
+            <Link
+              href={`/admin/audit-log?targetUserId=${profile.id}`}
+              className="inline-flex items-center gap-1 text-xs font-bold text-accent underline"
+            >
+              <Icon name="history" size={14} /> Voir le journal d&apos;audit
+            </Link>
           </div>
 
           {profile.suspendedAt ? (

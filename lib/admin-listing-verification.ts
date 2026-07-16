@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { requireAdminClient } from "@/lib/admin-guard";
 import { friendlyErrorMessage } from "@/lib/supabase-error";
+import { logDocumentAccess } from "@/lib/admin-audit-log";
 
 export interface PendingListingVerif {
   id: string;
@@ -57,6 +58,7 @@ export async function getPendingListingVerifs(): Promise<PendingListingVerif[]> 
         .from("property-videos")
         .createSignedUrl(row.video_path, 3600);
       videoUrl = signed?.signedUrl ?? "";
+      await logDocumentAccess("listing_video_accessed", "listing_verification", row.id, row.owner_id, "video");
     }
 
     results.push({

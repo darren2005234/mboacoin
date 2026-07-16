@@ -58,6 +58,12 @@ export default function AdminDashboardPage() {
       href: "/admin/users/suspended",
     },
     {
+      icon: "history",
+      label: "Journal d'audit",
+      description: "Vérifications, suspensions, accès aux documents",
+      href: "/admin/audit-log",
+    },
+    {
       icon: "query_stats",
       label: "Analytique",
       description: "Recherches, vues, favoris",
