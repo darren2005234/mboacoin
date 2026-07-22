@@ -137,6 +137,55 @@ export async function searchListings(criteria: SearchCriteria): Promise<SearchRe
   return { listings, total: count ?? 0 };
 }
 
+export interface MapListing {
+  id: string;
+  title: string;
+  price: number;
+  priceSuffix: string;
+  image: string;
+  isExact: boolean;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number | null;
+}
+
+/**
+ * Annonces géolocalisées correspondant aux mêmes filtres que searchListings,
+ * pour la carte de recherche. Passe par get_map_listings (SECURITY DEFINER) :
+ * latitude/longitude sont des colonnes révoquées en select direct (voir
+ * 20260717170000_listing_geolocation.sql), la fonction applique déjà la
+ * règle d'arrondi côté serveur.
+ */
+export async function getMapListings(
+  criteria: Pick<SearchCriteria, "city" | "neighborhood" | "minPrice" | "maxPrice" | "propertyType">
+): Promise<MapListing[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("get_map_listings", {
+    p_city: criteria.city?.trim() || null,
+    p_neighborhood: criteria.neighborhood?.trim() || null,
+    p_min_price: criteria.minPrice ?? null,
+    p_max_price: criteria.maxPrice ?? null,
+    p_property_type: criteria.propertyType?.trim() || null,
+  });
+
+  if (error || !data) return [];
+
+  return (data as {
+    id: string; title: string; price: number; price_period: string; image_url: string | null;
+    is_exact: boolean; latitude: number; longitude: number; radius_meters: number | null;
+  }[]).map((row) => ({
+    id: row.id,
+    title: row.title,
+    price: row.price,
+    priceSuffix: priceSuffixFor(row.price_period),
+    image: row.image_url ?? "/img/listings/demo-1.jpg",
+    isExact: row.is_exact,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    radiusMeters: row.radius_meters,
+  }));
+}
+
 export interface ResidenceSearchCriteria {
   keywords?: string;
   offset?: number;

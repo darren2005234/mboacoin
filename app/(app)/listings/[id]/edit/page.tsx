@@ -2,10 +2,17 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
 import { getListingForEdit, updateListing } from "@/lib/edit-listing";
+import type { ListingLocationValue } from "@/components/mboacoin/listing-location-picker";
+
+const ListingLocationPicker = dynamic(
+  () => import("@/components/mboacoin/listing-location-picker").then((m) => m.ListingLocationPicker),
+  { ssr: false }
+);
 import { PROPERTY_TYPES } from "@/lib/property-types";
 import { PRICE_PERIODS, PRICE_PERIOD_LABELS } from "@/lib/price-period";
 import { getMyAccountType } from "@/lib/verification";
@@ -65,6 +72,11 @@ export default function EditListingPage({
   const [floorNumber, setFloorNumber] = useState("");
   const [carAccess, setCarAccess] = useState(false);
   const [floodZone, setFloodZone] = useState(false);
+  const [location, setLocation] = useState<ListingLocationValue>({
+    latitude: null,
+    longitude: null,
+    locationPrecision: "approximatif",
+  });
   const [accountType, setAccountType] = useState("personne_physique");
   const [residences, setResidences] = useState<Residence[]>([]);
   const [residenceId, setResidenceId] = useState("");
@@ -115,6 +127,11 @@ export default function EditListingPage({
       setCarAccess(data.carAccess);
       setFloodZone(data.floodZone);
       setResidenceId(data.residenceId ?? "");
+      setLocation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        locationPrecision: data.locationPrecision,
+      });
       setLoading(false);
     })();
   }, [id, ready]);
@@ -156,6 +173,9 @@ export default function EditListingPage({
       floorNumber: floorNumber.trim() === "" ? null : Number(floorNumber),
       carAccess: carAccess,
       floodZone: floodZone,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      locationPrecision: location.locationPrecision,
     });
 
     if (result.error) {
@@ -236,6 +256,13 @@ export default function EditListingPage({
               placeholder="Ex : derrière la station Total, à 100m du carrefour Ndokoti"
               className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
             />
+          </div>
+
+          <div>
+            <label className="field-label">
+              Localisation sur la carte <span className="font-normal text-muted-foreground">(facultatif)</span>
+            </label>
+            <ListingLocationPicker value={location} onChange={setLocation} cityHint={city} />
           </div>
 
         {accountType === "residence" && (

@@ -8,9 +8,11 @@ import { MyLeasesToolbar } from "@/components/mboacoin/my-leases-toolbar";
 import { getMyLeases, type MyLease } from "@/lib/leases";
 import { getMyResidences, type Residence } from "@/lib/residences";
 import { getMyListings, type MyListing } from "@/lib/my-listings";
-import { getLeasesScheduleStatus, type LeaseScheduleStatus } from "@/lib/lease-payments";
+import { getLeasesScheduleStatus, getLeasePaymentAmountsForPeriod, type LeaseScheduleStatus } from "@/lib/lease-payments";
 import { getRenewalIntentsForLeases, type LeaseRenewalIntent } from "@/lib/lease-renewal-intent";
 import { countNewLeaseRequestsForLandlord } from "@/lib/lease-requests";
+import { monthPeriod } from "@/lib/lease-schedule";
+import { summarizeLeaseFinances, buildLateLeaseList, type FinanceSummary, type LateLeaseEntry } from "@/lib/lease-finance-summary";
 import { summarizeLeasesByResidence, type ResidenceLeaseSummary } from "@/lib/residence-lease-summary";
 import { useRequireAuth } from "@/lib/use-require-auth";
 
@@ -23,6 +25,10 @@ export function MyLeasesByResidence() {
   const [leases, setLeases] = useState<MyLease[]>([]);
   const [summaries, setSummaries] = useState<ResidenceLeaseSummary[]>([]);
   const [newRequests, setNewRequests] = useState(0);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary>({
+    expected: 0, collected: 0, missing: 0, advanceActiveCount: 0, advanceEarliestCoverageEnd: null,
+  });
+  const [lateLeases, setLateLeases] = useState<LateLeaseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,12 +38,19 @@ export function MyLeasesByResidence() {
         setLeases(leaseRows);
         setLoading(false);
         const active = leaseRows.filter((l) => l.status === "actif");
-        const [scheduleStatus, renewalIntents]: [Record<string, LeaseScheduleStatus>, Record<string, LeaseRenewalIntent>] =
-          await Promise.all([
-            getLeasesScheduleStatus(active),
-            getRenewalIntentsForLeases(active.filter((l) => l.paymentMode === "avance").map((l) => l.id)),
-          ]);
+        const period = monthPeriod(0);
+        const [scheduleStatus, renewalIntents, collectedByLease]: [
+          Record<string, LeaseScheduleStatus>,
+          Record<string, LeaseRenewalIntent>,
+          Map<string, number>,
+        ] = await Promise.all([
+          getLeasesScheduleStatus(active),
+          getRenewalIntentsForLeases(active.filter((l) => l.paymentMode === "avance").map((l) => l.id)),
+          getLeasePaymentAmountsForPeriod(active.map((l) => l.id), period),
+        ]);
         setSummaries(summarizeLeasesByResidence(residences, listings, leaseRows, scheduleStatus, renewalIntents));
+        setFinanceSummary(summarizeLeaseFinances(period, active, collectedByLease));
+        setLateLeases(buildLateLeaseList(active, scheduleStatus));
       }
     );
     countNewLeaseRequestsForLandlord().then(setNewRequests);
@@ -55,6 +68,8 @@ export function MyLeasesByResidence() {
         optIn={optIn}
         newRequests={newRequests}
         hasAdvanceLease={leases.some((l) => l.paymentMode === "avance")}
+        financeSummary={financeSummary}
+        lateLeases={lateLeases}
       />
 
       {loading ? (

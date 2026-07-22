@@ -78,7 +78,7 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
       return;
     }
     setLease(l);
-    if (l.status === "actif" && l.paymentPeriod === "mensuel" && l.paymentMode !== "avance") {
+    if (l.status === "actif" && l.paymentPeriod === "mensuel") {
       setSchedule(await getLeaseSchedule(l));
     }
     if (l.status === "actif" && l.paymentMode === "avance") {
@@ -237,11 +237,11 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
           </div>
           <div className="min-w-0 flex-1">
             <p className="line-clamp-1 text-sm font-bold">{lease.listingTitle}</p>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
                 {lease.tenantName ?? "Locataire non rattaché"} · {lease.tenantPhone}
               </p>
-              {lease.tenantVerified && <TrustSealBadge label="Vérifié" />}
+              {lease.tenantVerified && <TrustSealBadge label="Vérifié" className="shrink-0" />}
             </div>
             <Price amount={lease.rentAmount} suffix={priceSuffixFor(lease.paymentPeriod)} size="sm" className="mt-1" />
           </div>
@@ -501,13 +501,32 @@ export default function LandlordLeaseDetailPage({ params }: { params: Promise<{ 
             </div>
 
             {lease.paymentMode === "avance" ? (
-              <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
-                <p className="text-sm font-bold">Déclarer un versement</p>
-                <p className="text-xs text-muted-foreground">
-                  Choisissez le mois de départ couvert et le nombre de mois payés d&apos;avance.
-                </p>
-                <BatchPaymentForm rentAmount={lease.rentAmount} onSubmit={onDeclareBatch} busy={busy === "batch"} />
-              </div>
+              <>
+                <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-card">
+                  <p className="text-sm font-bold">Déclarer un versement</p>
+                  <p className="text-xs text-muted-foreground">
+                    Choisissez le mois de départ couvert et le nombre de mois payés d&apos;avance.
+                  </p>
+                  <BatchPaymentForm rentAmount={lease.rentAmount} onSubmit={onDeclareBatch} busy={busy === "batch"} />
+                </div>
+                <div className="space-y-2">
+                  <p className="px-1 text-sm font-bold">Mois couverts</p>
+                  {schedule.installments.filter((i) => i.paid).length === 0 ? (
+                    <p className="px-1 text-xs text-muted-foreground">Aucun mois payé pour l&apos;instant.</p>
+                  ) : (
+                    schedule.installments
+                      .filter((installment) => installment.paid)
+                      .map((installment) => (
+                        <InstallmentRow
+                          key={installment.period}
+                          installment={installment}
+                          busy={busy === installment.period}
+                          onMarkPaid={markPaid}
+                        />
+                      ))
+                  )}
+                </div>
+              </>
             ) : lease.paymentPeriod === "mensuel" ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getListingById } from "@/lib/listings";
+import { ListingLocationMapLazy } from "@/components/mboacoin/listing-location-map-lazy";
 import { formatFCFA } from "@/lib/utils";
 import { Price } from "@/components/mboacoin/price";
 import { TrustSeal } from "@/components/mboacoin/trust-seal";
@@ -49,6 +50,16 @@ export default async function ListingDetailPage({
   }
   const favoritesCount = await countFavoritesServer(listing.id);
   const isFavorited = favoriteIds.has(listing.id);
+
+  // latitude/longitude sont des colonnes révoquées en select direct (voir
+  // 20260717170000_listing_geolocation.sql) : get_listing_location applique
+  // la règle de révélation (exact / approximatif) côté serveur.
+  const { data: locationRowRaw } = await supabase
+    .rpc("get_listing_location", { p_listing_id: listing.id })
+    .maybeSingle();
+  const locationRow = locationRowRaw as {
+    is_exact: boolean; latitude: number; longitude: number; radius_meters: number | null;
+  } | null;
   if (!listing.available && !isTenant) {
     const isSuspended = listing.status === "suspendue";
     if (isOwner) {
@@ -122,6 +133,14 @@ export default async function ListingDetailPage({
             <Icon name="location_on" size={18} className="mt-0.5 shrink-0 text-accent" />
             <span>{listing.addressDescription}</span>
           </div>
+          )}
+          {locationRow && (
+            <ListingLocationMapLazy
+              latitude={locationRow.latitude}
+              longitude={locationRow.longitude}
+              isExact={locationRow.is_exact}
+              radiusMeters={locationRow.radius_meters}
+            />
           )}
           <div className="pt-1">
             <Price amount={listing.price} suffix={listing.priceSuffix} size="lg" />

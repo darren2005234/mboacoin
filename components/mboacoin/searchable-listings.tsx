@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Search, SlidersHorizontal, List, Map as MapIcon } from "lucide-react";
 import { ListingCardCompact } from "@/components/mboacoin/listing-card-compact";
 import { ListingRow } from "@/components/mboacoin/listing-row";
 import { ResidenceRow } from "@/components/mboacoin/residence-row";
@@ -13,6 +14,11 @@ import { getMyFavoriteIds } from "@/lib/favorites";
 import { getVerifiedListings, getListingsByCity, getVerifiedResidences } from "@/lib/home-sections";
 import { FiltersSheet, EMPTY_FILTERS, type Filters } from "@/components/mboacoin/filters-sheet";
 import { logSearchEvent } from "@/lib/search-events";
+
+const SearchResultsMap = dynamic(
+  () => import("@/components/mboacoin/search-results-map").then((m) => m.SearchResultsMap),
+  { ssr: false }
+);
 
 const SESSION_KEY = "mboacoin-search-filters";
 const PAGE_SIZE = 15;
@@ -37,6 +43,7 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<Sort>("recent");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   // Résultats (mode recherche OU section "Toutes les annonces" de l'accueil)
   const [listings, setListings] = useState<Listing[]>([]);
@@ -287,6 +294,15 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
         {loading ? "..." : isSearching ? `${total} annonce${total > 1 ? "s" : ""}` : title}
       </p>
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label={viewMode === "list" ? "Voir sur la carte" : "Voir en liste"}
+          onClick={() => setViewMode(viewMode === "list" ? "map" : "list")}
+          className="flex items-center gap-1 rounded-lg border border-border bg-card px-2 py-1.5 text-xs font-semibold text-muted-foreground"
+        >
+          {viewMode === "list" ? <MapIcon className="size-4" /> : <List className="size-4" />}
+          {viewMode === "list" ? "Carte" : "Liste"}
+        </button>
         {isSearching && (
           <button
             onClick={() => {
@@ -400,7 +416,7 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
         /* ===== MODE RECHERCHE ===== */
         <div className="space-y-4 px-5 pb-8">
           {listHeader("")}
-          {grid}
+          {viewMode === "map" ? <SearchResultsMap filters={filters} /> : grid}
         </div>
       ) : (
         /* ===== MODE ACCUEIL ===== */
@@ -440,7 +456,7 @@ export function SearchableListings({ userCity }: { userCity: string | null }) {
           {/* Toutes les annonces : catalogue triable + défilement infini */}
           <section className="space-y-3 px-5">
             {listHeader("Toutes les annonces")}
-            {grid}
+            {viewMode === "map" ? <SearchResultsMap filters={filters} /> : grid}
           </section>
         </div>
       )}

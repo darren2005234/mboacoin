@@ -103,6 +103,28 @@ export async function declarePaymentBatch(
   return { batchId: data as string };
 }
 
+/**
+ * Montant perçu par bail pour une période donnée, en une seule requête
+ * batchée (pas de N+1 sur un gestionnaire multi-biens) — pour la synthèse
+ * financière du bailleur (lib/lease-finance-summary.ts). RLS
+ * (lease_payments_select_landlord) fait déjà tout le travail de sécurité :
+ * impossible de lire le paiement d'un bail dont on n'est pas le bailleur,
+ * quelle que soit la liste d'ids passée ici.
+ */
+export async function getLeasePaymentAmountsForPeriod(
+  leaseIds: string[],
+  period: string
+): Promise<Map<string, number>> {
+  if (leaseIds.length === 0) return new Map();
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("lease_payments")
+    .select("lease_id, amount")
+    .in("lease_id", leaseIds)
+    .eq("period", period);
+  return new Map((data ?? []).map((r) => [r.lease_id, r.amount]));
+}
+
 export interface DueInstallment {
   period: string;
   dueDate: string;

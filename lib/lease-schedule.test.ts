@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { daysUntil, dueDateForPeriod, generateDueDates, nextUnpaidDueDate, todayIso } from "@/lib/lease-schedule";
+import {
+  daysUntil,
+  dueDateForPeriod,
+  generateDueDates,
+  isPeriodWithinLease,
+  monthPeriod,
+  nextUnpaidDueDate,
+  todayIso,
+} from "@/lib/lease-schedule";
 
 describe("generateDueDates", () => {
   test("normalise au 1er du mois même pour un bail commençant en milieu de mois", () => {
@@ -95,5 +103,42 @@ describe("retard dérivé (dueDate < aujourd'hui), même règle que getLeasesSch
   test("daysUntil est négatif pour une date passée, positif pour une date future", () => {
     expect(daysUntil("2026-07-10")).toBe(-5);
     expect(daysUntil("2026-07-20")).toBe(5);
+  });
+
+  test("monthPeriod(0) est le mois en cours, monthPeriod(-1) le mois précédent", () => {
+    expect(monthPeriod(0)).toBe("2026-07-01");
+    expect(monthPeriod(-1)).toBe("2026-06-01");
+  });
+});
+
+describe("isPeriodWithinLease", () => {
+  const lease = { startDate: "2026-02-15", paymentPeriod: "mensuel", endDate: "2026-05-10" };
+
+  test("avant le mois de début : hors bail", () => {
+    expect(isPeriodWithinLease("2026-01-01", lease)).toBe(false);
+  });
+
+  test("mois de début (même si le bail commence en milieu de mois) : dans le bail", () => {
+    expect(isPeriodWithinLease("2026-02-01", lease)).toBe(true);
+  });
+
+  test("mois intermédiaire : dans le bail", () => {
+    expect(isPeriodWithinLease("2026-03-01", lease)).toBe(true);
+  });
+
+  test("mois de fin (même si le bail se termine en milieu de mois) : dans le bail", () => {
+    expect(isPeriodWithinLease("2026-05-01", lease)).toBe(true);
+  });
+
+  test("après le mois de fin : hors bail", () => {
+    expect(isPeriodWithinLease("2026-06-01", lease)).toBe(false);
+  });
+
+  test("bail sans date de fin (en cours) : aucun mois futur n'est exclu", () => {
+    expect(isPeriodWithinLease("2030-01-01", { ...lease, endDate: null })).toBe(true);
+  });
+
+  test("bail journalier : jamais dans le calcul mensuel", () => {
+    expect(isPeriodWithinLease("2026-03-01", { ...lease, paymentPeriod: "journalier" })).toBe(false);
   });
 });

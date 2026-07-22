@@ -4,21 +4,27 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/mboacoin/icon";
 import { PushOptInCard } from "@/components/mboacoin/push-opt-in-card";
+import { LeaseFinanceSummaryCard } from "@/components/mboacoin/lease-finance-summary-card";
+import type { FinanceSummary, LateLeaseEntry } from "@/lib/lease-finance-summary";
 
 /**
  * Bloc d'en-tête commun aux vues "Mes baux" (liste plate et vue par
- * résidence) : actions rapides, carte d'opt-in push, bannière de
- * couvertures à renouveler. Partagé pour que les deux vues ne divergent
- * jamais sur ces éléments.
+ * résidence) : actions rapides, synthèse financière, carte d'opt-in push,
+ * bannière de couvertures à renouveler. Partagé pour que les deux vues ne
+ * divergent jamais sur ces éléments.
  */
 export function MyLeasesToolbar({
   optIn,
   newRequests,
   hasAdvanceLease,
+  financeSummary,
+  lateLeases,
 }: {
   optIn: string | null;
   newRequests: number;
   hasAdvanceLease: boolean;
+  financeSummary: FinanceSummary;
+  lateLeases: LateLeaseEntry[];
 }) {
   const router = useRouter();
 
@@ -45,6 +51,8 @@ export function MyLeasesToolbar({
           )}
         </button>
       </div>
+
+      <LeaseFinanceSummaryCard summary={financeSummary} lateLeases={lateLeases} />
 
       {hasAdvanceLease && (
         <Link

@@ -27,6 +27,10 @@ export interface NewListingInput {
   carAccess: boolean;
   floodZone: boolean;
   visitFeeAmount: number;
+  /** Placés manuellement par le bailleur sur la carte — jamais de géocodage automatique. Optionnel. */
+  latitude: number | null;
+  longitude: number | null;
+  locationPrecision: "approximatif" | "precis";
 }
 
 export interface CreateListingResult {
@@ -116,6 +120,9 @@ export async function createListing(input: NewListingInput): Promise<CreateListi
       car_access: input.carAccess,
       flood_zone: input.floodZone,
       visit_fee_amount: visitFeeAmount,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      location_precision: input.locationPrecision,
     })
     .select("id")
     .single();

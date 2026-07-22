@@ -80,3 +80,20 @@ export async function markAllNotificationsRead() {
     .eq("user_id", user.id)
     .is("read_at", null);
 }
+
+/** Supprime une notification de l'utilisateur connecté. */
+export async function deleteNotification(notificationId: string) {
+  const supabase = createClient();
+  await supabase.from("notifications").delete().eq("id", notificationId);
+}
+
+/** Supprime toutes les notifications de l'utilisateur connecté. */
+export async function deleteAllNotifications() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("notifications").delete().eq("user_id", user.id);
+}

@@ -299,6 +299,33 @@
   opacity: 0.7;
 }
 
+/* ============================================================
+   ZOOM AUTOMATIQUE iOS
+   Safari iOS zoome sur tout champ dont le texte affiche moins de
+   16px au focus. De nombreux input/textarea de l'app sont bruts
+   (pas de composant de saisie partage) et utilisent des classes
+   Tailwind sous 16px (text-[15px], text-sm...). Regle hors @layer
+   : elle prime donc sur les classes Tailwind (layer "utilities"),
+   quelle que soit leur specificite, sans avoir besoin de !important.
+   Scopee via @supports a WebKit iOS uniquement (Android et les
+   navigateurs desktop ne reconnaissent pas -webkit-touch-callout)
+   pour ne rien changer ailleurs.
+   ============================================================ */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* .mboa-phone .PhoneInputInput (plus bas dans ce fichier) est plus
+     specifique que le simple selecteur "input" ci-dessus et gagnerait
+     sinon le cascade avec ses 14px fixes (react-phone-number-input). */
+  .mboa-phone .PhoneInputInput {
+    font-size: 16px;
+  }
+}
+
 /* Dimensions "vraie app" reutilisables */
 .screen-title {
   font-size: 1.375rem; /* 22px */

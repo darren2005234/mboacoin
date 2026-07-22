@@ -5,9 +5,11 @@ import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { MyLeasesToolbar } from "@/components/mboacoin/my-leases-toolbar";
 import { LeaseListItem } from "@/components/mboacoin/lease-list-item";
 import { getMyLeases, type MyLease } from "@/lib/leases";
-import { getLeasesScheduleStatus, type LeaseScheduleStatus } from "@/lib/lease-payments";
+import { getLeasesScheduleStatus, getLeasePaymentAmountsForPeriod, type LeaseScheduleStatus } from "@/lib/lease-payments";
 import { getRenewalIntentsForLeases, type LeaseRenewalIntent } from "@/lib/lease-renewal-intent";
 import { countNewLeaseRequestsForLandlord } from "@/lib/lease-requests";
+import { monthPeriod } from "@/lib/lease-schedule";
+import { summarizeLeaseFinances, buildLateLeaseList, type FinanceSummary, type LateLeaseEntry } from "@/lib/lease-finance-summary";
 import { useRequireAuth } from "@/lib/use-require-auth";
 
 /** Espace "Mes baux" en liste plate — comptes particulier et agence (pas de résidence à regrouper). */
@@ -20,6 +22,10 @@ export function MyLeasesFlatList() {
   const [scheduleStatus, setScheduleStatus] = useState<Record<string, LeaseScheduleStatus>>({});
   const [renewalIntents, setRenewalIntents] = useState<Record<string, LeaseRenewalIntent>>({});
   const [newRequests, setNewRequests] = useState(0);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummary>({
+    expected: 0, collected: 0, missing: 0, advanceActiveCount: 0, advanceEarliestCoverageEnd: null,
+  });
+  const [lateLeases, setLateLeases] = useState<LateLeaseEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,12 +34,16 @@ export function MyLeasesFlatList() {
       setLeases(data);
       setLoading(false);
       const active = data.filter((l) => l.status === "actif");
-      const [status, intents] = await Promise.all([
+      const period = monthPeriod(0);
+      const [status, intents, collectedByLease] = await Promise.all([
         getLeasesScheduleStatus(active),
         getRenewalIntentsForLeases(active.filter((l) => l.paymentMode === "avance").map((l) => l.id)),
+        getLeasePaymentAmountsForPeriod(active.map((l) => l.id), period),
       ]);
       setScheduleStatus(status);
       setRenewalIntents(intents);
+      setFinanceSummary(summarizeLeaseFinances(period, active, collectedByLease));
+      setLateLeases(buildLateLeaseList(active, status));
     });
     countNewLeaseRequestsForLandlord().then(setNewRequests);
   }, [ready]);
@@ -50,6 +60,8 @@ export function MyLeasesFlatList() {
         optIn={optIn}
         newRequests={newRequests}
         hasAdvanceLease={leases.some((l) => l.paymentMode === "avance")}
+        financeSummary={financeSummary}
+        lateLeases={lateLeases}
       />
 
       {loading ? (

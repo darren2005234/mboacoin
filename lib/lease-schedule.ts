@@ -129,3 +129,33 @@ export function daysUntil(dateIso: string): number {
   target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
+
+/**
+ * Le mois `period` (YYYY-MM-01) fait-il partie de l'échéancier mensuel de ce
+ * bail ? Répond à une question qu'aucune fonction ci-dessus ne pose
+ * directement (generateDueDates énumère, nextUnpaidDueDate cherche le
+ * premier trou) — utilisé par la synthèse financière du bailleur
+ * (lib/lease-finance-summary.ts) pour savoir si un bail doit contribuer au
+ * "attendu" d'un mois donné, sans recalculer l'échéancier lui-même.
+ * Comparaison de chaînes YYYY-MM (ordre lexicographique = chronologique),
+ * jamais Date/toISOString (voir la mise en garde en tête de fichier).
+ */
+export function isPeriodWithinLease(
+  period: string,
+  lease: { startDate: string; paymentPeriod: string; endDate: string | null }
+): boolean {
+  if (lease.paymentPeriod === "journalier") return false;
+  const month = period.slice(0, 7);
+  if (month < lease.startDate.slice(0, 7)) return false;
+  if (lease.endDate && month > lease.endDate.slice(0, 7)) return false;
+  return true;
+}
+
+/** Période (YYYY-MM-01) du mois en cours ou précédent, en heure locale. */
+export function monthPeriod(offsetMonths: 0 | -1 = 0): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + offsetMonths; // 0-indexé ; -1 = mois précédent
+  const d = new Date(year, month, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}

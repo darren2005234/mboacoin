@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { ScreenHeader } from "@/components/mboacoin/screen-header";
 import { Icon } from "@/components/mboacoin/icon";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,12 @@ import imageCompression from "browser-image-compression";
 import { PROPERTY_TYPES } from "@/lib/property-types";
 import { PRICE_PERIODS, PRICE_PERIOD_LABELS } from "@/lib/price-period";
 import { getMyResidences, type Residence } from "@/lib/residences";
+import type { ListingLocationValue } from "@/components/mboacoin/listing-location-picker";
+
+const ListingLocationPicker = dynamic(
+  () => import("@/components/mboacoin/listing-location-picker").then((m) => m.ListingLocationPicker),
+  { ssr: false }
+);
 
 const AMENITIES = [
   "Climatisation",
@@ -63,6 +70,11 @@ function PublishFormInner({ accountType, verified }: { accountType: string; veri
   const [floorNumber, setFloorNumber] = useState("");
   const [carAccess, setCarAccess] = useState(false);
   const [floodZone, setFloodZone] = useState(false);
+  const [location, setLocation] = useState<ListingLocationValue>({
+    latitude: null,
+    longitude: null,
+    locationPrecision: "approximatif",
+  });
 
   // Restauration : true = brouillon détecté, on propose de reprendre
   const [draftFound, setDraftFound] = useState(false);
@@ -265,6 +277,9 @@ function restoreDraft() {
       carAccess: carAccess,
       floodZone: floodZone,
       files,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      locationPrecision: location.locationPrecision,
     });
 
     if (result.error) {
@@ -401,6 +416,13 @@ function restoreDraft() {
             placeholder="Ex : derrière la station Total, à 100m du carrefour Ndokoti"
             className="w-full rounded-xl border border-input bg-card px-4 py-3 text-[15px] outline-none focus:border-accent focus:ring-2 focus:ring-ring/25"
           />
+        </div>
+
+        <div>
+          <label className="field-label">
+            Localisation sur la carte <span className="font-normal text-muted-foreground">(facultatif)</span>
+          </label>
+          <ListingLocationPicker value={location} onChange={setLocation} cityHint={city} />
         </div>
 
         {isResidence && (

@@ -27,6 +27,9 @@ export interface EditableListing {
   pricePeriod: string;
   visitFeeAmount: number;
   ownerVerified: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  locationPrecision: "approximatif" | "precis";
 }
 
 /** Charge une annonce pour l'édition (seulement si on en est le propriétaire). */
@@ -42,7 +45,7 @@ export async function getListingForEdit(
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_amount, deposit_amount, visit_fee_amount, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period"
+      "title, property_type, city, neighborhood, price, bedrooms, bathrooms, advance_amount, deposit_amount, visit_fee_amount, furnishing, water, electricity, amenities, description, owner_id, rooms, area, available_from, address_description, floor_number, car_access, flood_zone, residence_id, price_period, location_precision"
     )
     .eq("id", listingId)
     .maybeSingle();
@@ -55,6 +58,11 @@ export async function getListingForEdit(
     .select("verification")
     .eq("id", user.id)
     .maybeSingle();
+
+  // latitude/longitude sont des colonnes révoquées en select direct (voir
+  // 20260717170000_listing_geolocation.sql) : même le propriétaire passe par
+  // get_listing_location, qui lui renvoie toujours l'exact.
+  const { data: loc } = await supabase.rpc("get_listing_location", { p_listing_id: listingId }).maybeSingle();
 
   return {
     title: data.title,
@@ -82,6 +90,9 @@ export async function getListingForEdit(
     pricePeriod: (data.price_period as string | null) ?? "mensuel",
     visitFeeAmount: (data as { visit_fee_amount: number | null }).visit_fee_amount ?? 0,
     ownerVerified: profile?.verification === "verifie",
+    latitude: (loc as { latitude: number } | null)?.latitude ?? null,
+    longitude: (loc as { longitude: number } | null)?.longitude ?? null,
+    locationPrecision: (data.location_precision as "approximatif" | "precis" | null) ?? "approximatif",
   };
 }
 
@@ -111,6 +122,9 @@ export interface UpdateListingInput {
   carAccess: boolean;
   floodZone: boolean;
   visitFeeAmount: number;
+  latitude: number | null;
+  longitude: number | null;
+  locationPrecision: "approximatif" | "precis";
 }
 
 /** Met à jour une annonce et ajoute d'éventuelles nouvelles photos. */
@@ -173,6 +187,9 @@ export async function updateListing(
       car_access: input.carAccess,
       flood_zone: input.floodZone,
       visit_fee_amount: visitFeeAmount,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      location_precision: input.locationPrecision,
     })
     .eq("id", listingId);
 
